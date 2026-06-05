@@ -133,9 +133,14 @@ app.use((req, res, next) => {
 
 const httpServer = createServer(app);
 
-httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
-  log(`serving on port ${port}`);
-});
+// Only start listening in non-serverless environments
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+
+if (!isServerless) {
+  httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
+    log(`serving on port ${port}`);
+  });
+}
 
 (async () => {
   if (process.env.INFERENCE_API_KEY) {
@@ -177,4 +182,10 @@ httpServer.listen({ port, host: "0.0.0.0", reusePort: true }, () => {
   } else {
     serveStatic(app);
   }
+
+  // Signal that initialization is complete
+  (globalThis as any).__appReady = true;
 })();
+
+// Export Express app for serverless platforms (Vercel, AWS Lambda)
+export { app, httpServer };
