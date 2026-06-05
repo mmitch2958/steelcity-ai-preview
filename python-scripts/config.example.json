@@ -1,0 +1,77 @@
+{
+  "topic": "California Surfing March 2026",
+  "style": "lifestyle",
+  "output": "./output",
+  "carousel": {
+    "platform": "instagram_portrait",
+    "slides": [
+      {
+        "type": "cover",
+        "title": "California Surfing in March",
+        "subtitle": "Your Complete 2026 Guide"
+      },
+      {
+        "type": "stat",
+        "stat": "57-60°F",
+        "label": "Water Temperature",
+        "detail": "4/3mm wetsuit recommended",
+        "icon": "🌊"
+      },
+      {
+        "type": "list",
+        "title": "🏄 Best March Spots",
+        "items": [
+          "Trestles – World-class performance waves",
+          "Malibu – Classic longboard point break",
+          "Steamer Lane – Santa Cruz legend",
+          "Blacks Beach – Powerful San Diego barrels",
+          "Rincon – Queen of the Coast"
+        ]
+      },
+      {
+        "type": "stat",
+        "stat": "Spring Swells",
+        "label": "NW + SW Combo",
+        "detail": "Perfect for beach breaks",
+        "icon": "📈"
+      },
+      {
+        "type": "list",
+        "title": "☀️ March Conditions",
+        "items": [
+          "Air temp: 65-75°F (perfect!)",
+          "Morning offshore winds = glassy",
+          "Afternoon onshore by 2pm",
+          "Less crowded than summer",
+          "Southern Hemi swells picking up"
+        ]
+      },
+      {
+        "type": "warning",
+        "title": "⚠️ Know Before You Go",
+        "items": [
+          "Bring a quality 4/3mm wetsuit",
+          "Booties recommended for rocky spots",
+          "Dawn patrol = best conditions",
+          "Respect locals in the lineup",
+          "Check Surfline forecast daily"
+        ]
+      },
+      {
+        "type": "cta",
+        "title": "Save This Guide 📌",
+        "subtitle": "Tag a friend who needs a surf trip"
+      }
+    ],
+    "background_queries": [
+      "california surfing sunset ocean",
+      "surfer riding wave barrel",
+      "beach sunrise california coast",
+      "ocean waves closeup power",
+      "surfboard beach sand lifestyle",
+      "pacific coast highway scenic",
+      "surfer silhouette golden hour",
+      "california beach palm trees"
+    ]
+  }
+}

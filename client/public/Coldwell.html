@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SteelCity AI | Coldwell Banker Interactive Demos</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body { font-family: 'Lato', sans-serif; background-color: #f8f9fa; color: #333; }
+        h1, h2, h3, h4, h5 { font-family: 'Playfair Display', serif; }
+        
+        .cb-blue { color: #004071; }
+        .bg-cb-blue { background-color: #004071; }
+        .border-cb-blue { border-color: #004071; }
+        
+        /* Demo Container Styling */
+        .demo-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border-top: 6px solid #004071;
+        }
+
+        /* Phone Simulator (Demo 1) */
+        .phone-screen {
+            background: #f3f4f6;
+            border: 8px solid #1f2937;
+            border-radius: 24px;
+            height: 450px;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-bubble {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .chat-ai { background-color: #004071; color: white; border-bottom-left-radius: 4px; align-self: flex-start; }
+        .chat-user { background-color: #e5e7eb; color: #1f2937; border-bottom-right-radius: 4px; align-self: flex-end; }
+        
+        /* Grid Simulator (Demo 3) */
+        .lead-dot {
+            width: 100%;
+            padding-top: 100%; /* 1:1 Aspect Ratio */
+            border-radius: 4px;
+            background-color: #e2e8f0; /* Default Gray */
+            transition: all 0.4s ease;
+            position: relative;
+        }
+        .lead-dot.scanning { background-color: #fcd34d; transform: scale(0.9); }
+        .lead-dot.active { background-color: #22c55e; box-shadow: 0 0 10px rgba(34, 197, 94, 0.5); } /* Green */
+        .lead-dot.dead { background-color: #94a3b8; opacity: 0.3; } /* Darker Gray */
+        .lead-dot.unsub { background-color: #ef4444; opacity: 0.5; } /* Red */
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        /* Typing Effect Cursor */
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+        /* Chart Constraints */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/95 backdrop-blur shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-20">
+                <div class="flex flex-col">
+                    <span class="text-2xl font-bold text-[#004071] tracking-widest font-serif">COLDWELL BANKER</span>
+                    <span class="text-[10px] uppercase tracking-[0.3em] text-gray-500">Cranberry Twp &bull; Automation Suite</span>
+                </div>
+                <div class="hidden md:flex space-x-8 text-sm font-bold text-gray-600 tracking-wide uppercase">
+                    <a href="#demo1" class="hover:text-[#004071] transition">1. The North Star</a>
+                    <a href="#demo2" class="hover:text-[#004071] transition">2. Marketing Co-Pilot</a>
+                    <a href="#demo3" class="hover:text-[#004071] transition">3. The Gold Mine</a>
+                    <a href="#roi" class="text-[#004071]">ROI Model</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="bg-[#004071] text-white pt-20 pb-24 px-4 text-center">
+        <h1 class="text-4xl md:text-6xl mb-6 italic">Custom AI Solutions</h1>
+        <p class="text-xl font-light text-blue-100 max-w-3xl mx-auto">
+            Three ways SteelCity AI integrates with your branch to automate growth, specifically tailored for the high-volume Cranberry market.
+        </p>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 -mt-16 space-y-24 pb-20">
+
+        <!-- DEMO 1: THE NORTH STAR (Lead Concierge) -->
+        <section id="demo1" class="scroll-mt-24">
+            <div class="flex items-center mb-8">
+                <div class="bg-[#004071] text-white font-bold rounded-full w-10 h-10 flex items-center justify-center mr-4">1</div>
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">"The North Star" Workflow</h2>
+                    <p class="text-gray-500">Value Proposition: <span class="text-[#004071] font-bold">Speed to Lead</span></p>
+                </div>
+            </div>
+
+            <div class="demo-card grid grid-cols-1 lg:grid-cols-2">
+                <div class="p-8 md:p-12 flex flex-col justify-center bg-gray-50">
+                    <h3 class="text-2xl font-bold text-[#004071] mb-4">Never Miss a Lead</h3>
+                    <p class="text-gray-600 mb-6 leading-relaxed">
+                        In Cranberry, leads from Zillow or Realtor.com decay in minutes. Our "North Star" agent lives in your system 24/7. It engages instantly via SMS, qualifies the buyer, and books the appointment on your agent's calendar.
+                    </p>
+                    <ul class="space-y-3 mb-8">
+                        <li class="flex items-center text-sm text-gray-700">
+                            <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3 font-bold text-xs">&#10003;</span>
+                            Sub-60 second response time
+                        </li>
+                        <li class="flex items-center text-sm text-gray-700">
+                            <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3 font-bold text-xs">&#10003;</span>
+                            Qualifies Budget & Timeline
+                        </li>
+                        <li class="flex items-center text-sm text-gray-700">
+                            <span class="w-6 h-6 rounded-full bg-green-100 text-green-600 flex items-center justify-center mr-3 font-bold text-xs">&#10003;</span>
+                            Connects to MoxiWorks CRM
+                        </li>
+                    </ul>
+                    <button onclick="startChatDemo()" class="bg-[#004071] text-white py-3 px-6 rounded shadow hover:bg-blue-800 transition font-bold self-start">
+                        &#9658; Replay Simulation
+                    </button>
+                </div>
+
+                <div class="p-8 bg-white flex justify-center items-center border-l border-gray-100">
+                    <div class="phone-screen w-full max-w-xs shadow-2xl relative">
+                        <!-- Phone Header -->
+                        <div class="bg-gray-100 p-4 border-b border-gray-200 text-center rounded-t-lg">
+                            <div class="text-xs text-gray-500 font-bold tracking-widest uppercase">Messages</div>
+                            <div class="text-sm font-bold text-gray-800">Unsaved Number</div>
+                        </div>
+                        <!-- Chat Area -->
+                        <div id="northStarChat" class="flex-1 p-4 overflow-y-auto flex flex-col bg-white">
+                            <!-- Messages injected via JS -->
+                        </div>
+                        <!-- Phone Footer -->
+                        <div class="bg-gray-50 p-3 border-t border-gray-200 rounded-b-lg">
+                            <div class="h-8 bg-white border border-gray-300 rounded-full w-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEMO 2: MARKETING CO-PILOT (Listing Generator) -->
+        <section id="demo2" class="scroll-mt-24">
+            <div class="flex items-center mb-8">
+                <div class="bg-[#004071] text-white font-bold rounded-full w-10 h-10 flex items-center justify-center mr-4">2</div>
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Marketing Co-Pilot</h2>
+                    <p class="text-gray-500">Value Proposition: <span class="text-[#004071] font-bold">Operational Efficiency</span></p>
+                </div>
+            </div>
+
+            <div class="demo-card grid grid-cols-1 lg:grid-cols-5">
+                <!-- Controls -->
+                <div class="lg:col-span-2 bg-gray-100 p-8 border-r border-gray-200">
+                    <h3 class="font-bold text-[#004071] text-xl mb-6">Property Details</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Listing Vibe</label>
+                            <select id="listingVibe" class="w-full p-2 border border-gray-300 rounded bg-white focus:border-[#004071] outline-none">
+                                <option value="luxury">Global Luxury (Elegant)</option>
+                                <option value="modern">Modern & Sleek</option>
+                                <option value="family">Warm & Family Friendly</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Key Features</label>
+                            <div class="space-y-2">
+                                <label class="flex items-center p-2 bg-white rounded border border-gray-200 cursor-pointer hover:border-blue-300">
+                                    <input type="checkbox" class="feature-check text-[#004071]" value="Gourmet Kitchen">
+                                    <span class="ml-2 text-sm text-gray-700">Gourmet Kitchen</span>
+                                </label>
+                                <label class="flex items-center p-2 bg-white rounded border border-gray-200 cursor-pointer hover:border-blue-300">
+                                    <input type="checkbox" class="feature-check text-[#004071]" value="Finished Basement">
+                                    <span class="ml-2 text-sm text-gray-700">Finished Basement</span>
+                                </label>
+                                <label class="flex items-center p-2 bg-white rounded border border-gray-200 cursor-pointer hover:border-blue-300">
+                                    <input type="checkbox" class="feature-check text-[#004071]" value="Seneca Valley Schools">
+                                    <span class="ml-2 text-sm text-gray-700">Seneca Valley Schools</span>
+                                </label>
+                                <label class="flex items-center p-2 bg-white rounded border border-gray-200 cursor-pointer hover:border-blue-300">
+                                    <input type="checkbox" class="feature-check text-[#004071]" value="Outdoor Oasis">
+                                    <span class="ml-2 text-sm text-gray-700">Backyard Oasis</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <button onclick="generateListing()" class="w-full bg-[#004071] text-white font-bold py-3 rounded hover:bg-blue-800 transition shadow">
+                            Generate Description
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Output -->
+                <div class="lg:col-span-3 p-8 bg-white flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <h4 class="font-bold text-gray-400 text-sm uppercase tracking-wider">AI Output Preview</h4>
+                        <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded font-bold">MLS Compliant</span>
+                    </div>
+                    
+                    <div class="flex-grow bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-6 relative">
+                        <p id="listingOutput" class="text-gray-700 leading-8 font-serif text-lg typing-cursor">
+                            Select features and click "Generate" to see SteelCity AI draft a listing description instantly...
+                        </p>
+                    </div>
+                    
+                    <p class="text-xs text-gray-400 mt-4 text-center">
+                        *This tool saves agents approx. 45 mins per new listing setup.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- DEMO 3: THE GOLD MINE (Database Reactivation) -->
+        <section id="demo3" class="scroll-mt-24">
+            <div class="flex items-center mb-8">
+                <div class="bg-[#004071] text-white font-bold rounded-full w-10 h-10 flex items-center justify-center mr-4">3</div>
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">"The Gold Mine" Protocol</h2>
+                    <p class="text-gray-500">Value Proposition: <span class="text-[#004071] font-bold">Revenue Growth / Lead Reactivation</span></p>
+                </div>
+            </div>
+
+            <div class="demo-card grid grid-cols-1 lg:grid-cols-3">
+                <div class="p-8 bg-gray-800 text-white flex flex-col justify-between">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-4">Wake Up Your Database</h3>
+                        <p class="text-gray-300 text-sm leading-relaxed mb-8">
+                            Your CRM is full of "dead" leads from 6-12 months ago. Our AI agent can text thousands of them at once to find the ones who are ready to buy <em>now</em>.
+                        </p>
+                        
+                        <div class="bg-gray-700 rounded p-4 mb-4 border-l-4 border-yellow-400">
+                            <div class="text-xs text-gray-400 uppercase tracking-widest">Leads Scanned</div>
+                            <div class="text-3xl font-bold text-white" id="scanCount">0</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-4 mb-4 border-l-4 border-green-500">
+                            <div class="text-xs text-gray-400 uppercase tracking-widest">Conversations Started</div>
+                            <div class="text-3xl font-bold text-white" id="activeCount">0</div>
+                        </div>
+                        <div class="bg-gray-700 rounded p-4 border-l-4 border-red-500">
+                            <div class="text-xs text-gray-400 uppercase tracking-widest">Unsubscribes</div>
+                            <div class="text-3xl font-bold text-white" id="unsubCount">0</div>
+                        </div>
+                    </div>
+                    
+                    <button id="miningBtn" onclick="startMining()" class="mt-8 w-full bg-yellow-500 text-gray-900 font-bold py-3 rounded shadow hover:bg-yellow-400 transition">
+                        Launch Reactivation Campaign
+                    </button>
+                </div>
+
+                <div class="lg:col-span-2 p-8 bg-gray-50">
+                    <!-- Visual Grid of Leads -->
+                    <div class="grid grid-cols-10 gap-2" id="miningGrid">
+                        <!-- 100 Dots injected by JS -->
+                    </div>
+                    <div class="flex justify-between mt-4 text-xs font-bold text-gray-500 uppercase">
+                        <span class="flex items-center"><span class="w-3 h-3 bg-gray-300 rounded mr-2"></span>Dormant</span>
+                        <span class="flex items-center"><span class="w-3 h-3 bg-yellow-300 rounded mr-2"></span>Scanning</span>
+                        <span class="flex items-center"><span class="w-3 h-3 bg-green-500 rounded mr-2"></span>Active Opportunity</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ROI Summary -->
+        <section id="roi" class="bg-white rounded-xl shadow-lg p-8 md:p-12 border border-gray-200">
+            <h2 class="text-3xl font-bold text-[#004071] mb-8 text-center">Projected Branch Impact (Year 1)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <p class="text-lg text-gray-600 mb-6">
+                        By combining these three protocols—Instant Response, Marketing Automation, and Database Reactivation—the Cranberry branch can significantly outperform market trends.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-center p-3 bg-blue-50 rounded text-[#004071] font-bold">
+                            <span class="text-2xl mr-4">+20%</span> Lead Conversion Rate
+                        </li>
+                        <li class="flex items-center p-3 bg-blue-50 rounded text-[#004071] font-bold">
+                            <span class="text-2xl mr-4">-15h</span> Weekly Admin Time Per Agent
+                        </li>
+                        <li class="flex items-center p-3 bg-blue-50 rounded text-[#004071] font-bold">
+                            <span class="text-2xl mr-4">5-10</span> "Found" Deals per Month (Reactivation)
+                        </li>
+                    </ul>
+                </div>
+                <div class="chart-container">
+                    <canvas id="roiChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-900 text-gray-400 py-12 text-center border-t border-gray-800">
+        <p>&copy; 2026 SteelCity AI. Unofficial Demo for Coldwell Banker.</p>
+    </footer>
+
+    <script>
+        // --- DEMO 1: CHAT LOGIC ---
+        const chatMessages = [
+            { sender: 'user', text: "Is 124 Freedom Rd still available? I'd like to see it." },
+            { sender: 'ai', text: "Hi! Thanks for reaching out to Coldwell Banker. Yes, Freedom Rd is available! It's a stunning property. Are you looking to buy soon, or just browsing?" },
+            { sender: 'user', text: "Ideally looking to move before the school year starts." },
+            { sender: 'ai', text: "That makes sense, Seneca Valley is a great district. Have you been pre-approved for a mortgage yet?" },
+            { sender: 'user', text: "Yes, pre-approved up to 450k." },
+            { sender: 'ai', text: "Perfect. I'll have Mike, our area specialist, reach out to schedule a private tour. What time works best for a call?" }
+        ];
+
+        function startChatDemo() {
+            const container = document.getElementById('northStarChat');
+            container.innerHTML = ''; // Clear
+            let delay = 500;
+
+            chatMessages.forEach(msg => {
+                setTimeout(() => {
+                    const div = document.createElement('div');
+                    div.className = `chat-bubble ${msg.sender === 'ai' ? 'chat-ai' : 'chat-user'}`;
+                    div.innerText = msg.text;
+                    container.appendChild(div);
+                    container.scrollTop = container.scrollHeight;
+                }, delay);
+                delay += (msg.text.length * 30) + 800; // Dynamic typing delay
+            });
+        }
+        
+        // Start chat on load
+        setTimeout(startChatDemo, 1000);
+
+
+        // --- DEMO 2: LISTING GENERATOR LOGIC ---
+        const phrases = {
+            luxury: {
+                opener: "Experience unparalleled elegance in this stunning residence. ",
+                featureAdj: "custom-designed",
+                closer: "A home of this caliber is a rare find in Cranberry Township."
+            },
+            modern: {
+                opener: "Sleek lines and contemporary finishes define this architectural masterpiece. ",
+                featureAdj: "state-of-the-art",
+                closer: "Designed for the modern lifestyle, this home is move-in ready."
+            },
+            family: {
+                opener: "Welcome home to warmth, comfort, and space for everyone. ",
+                featureAdj: "spacious",
+                closer: "Create lasting memories in a neighborhood you'll love."
+            }
+        };
+
+        function generateListing() {
+            const vibe = document.getElementById('listingVibe').value;
+            const checks = document.querySelectorAll('.feature-check:checked');
+            const features = Array.from(checks).map(c => c.value);
+            const outputBox = document.getElementById('listingOutput');
+            
+            outputBox.innerText = ""; // Clear
+            outputBox.classList.add('typing-cursor');
+
+            let text = phrases[vibe].opener;
+            
+            if (features.length > 0) {
+                text += `Featuring ${phrases[vibe].featureAdj} amenities including `;
+                // Natural language list
+                if (features.length === 1) text += `a ${features[0]}. `;
+                else if (features.length === 2) text += `a ${features[0]} and ${features[1]}. `;
+                else {
+                    const last = features.pop();
+                    text += `a ${features.join(', ')}, and a ${last}. `;
+                }
+            } else {
+                text += `Boasting an array of premium amenities tailored for comfort. `;
+            }
+
+            text += phrases[vibe].closer;
+            text += " Contact Coldwell Banker Cranberry today for a private tour.";
+
+            // Typing Effect
+            let i = 0;
+            const typeInterval = setInterval(() => {
+                outputBox.textContent += text.charAt(i);
+                i++;
+                if (i >= text.length) {
+                    clearInterval(typeInterval);
+                    outputBox.classList.remove('typing-cursor');
+                }
+            }, 30); // Speed of typing
+        }
+
+
+        // --- DEMO 3: MINING GRID LOGIC ---
+        const gridContainer = document.getElementById('miningGrid');
+        // Create 100 dots
+        for(let i=0; i<100; i++) {
+            let dot = document.createElement('div');
+            dot.className = 'lead-dot';
+            dot.id = `dot-${i}`;
+            gridContainer.appendChild(dot);
+        }
+
+        let isMining = false;
+
+        function startMining() {
+            if(isMining) return;
+            isMining = true;
+            document.getElementById('miningBtn').innerText = "Scanning Database...";
+            document.getElementById('miningBtn').classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Reset counts
+            let scanned = 0;
+            let active = 0;
+            let unsub = 0;
+            
+            // Reset grid
+            document.querySelectorAll('.lead-dot').forEach(d => {
+                d.className = 'lead-dot';
+            });
+
+            let index = 0;
+            const interval = setInterval(() => {
+                if(index >= 100) {
+                    clearInterval(interval);
+                    isMining = false;
+                    document.getElementById('miningBtn').innerText = "Launch Reactivation Campaign";
+                    document.getElementById('miningBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+                    return;
+                }
+
+                // Process batch of dots for speed
+                for(let k=0; k<2; k++) { // Do 2 at a time
+                    if(index >= 100) break;
+                    
+                    const dot = document.getElementById(`dot-${index}`);
+                    dot.classList.add('scanning');
+                    
+                    // Random Outcome Logic
+                    setTimeout(() => {
+                        dot.classList.remove('scanning');
+                        const rand = Math.random();
+                        if(rand > 0.90) { // 10% Active (Green)
+                            dot.classList.add('active');
+                            active++;
+                            document.getElementById('activeCount').innerText = active;
+                        } else if(rand < 0.05) { // 5% Unsub (Red)
+                            dot.classList.add('unsub');
+                            unsub++;
+                            document.getElementById('unsubCount').innerText = unsub;
+                        } else { // Dead (Grey)
+                            dot.classList.add('dead');
+                        }
+                    }, 300); // Scan delay
+                    
+                    scanned++;
+                    document.getElementById('scanCount').innerText = scanned;
+                    index++;
+                }
+
+            }, 50); // Speed of iteration
+        }
+
+
+        // --- ROI CHART ---
+        const ctxRoi = document.getElementById('roiChart').getContext('2d');
+        new Chart(ctxRoi, {
+            type: 'bar',
+            data: {
+                labels: ['Current Revenue', 'With SteelCity AI'],
+                datasets: [{
+                    label: 'Annual Branch Revenue Projection',
+                    data: [12000000, 15600000], // Arbitrary scalable numbers
+                    backgroundColor: ['#9ca3af', '#004071'],
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return '$' + context.raw.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) { return '$' + value / 1000000 + 'M'; }
+                        }
+                    }
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>

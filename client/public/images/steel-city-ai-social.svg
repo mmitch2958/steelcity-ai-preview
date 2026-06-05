@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" fill="none">
+  <rect width="1200" height="630" fill="#0F172A"/>
+  <!-- Grid lines -->
+  <line x1="0" y1="210" x2="1200" y2="210" stroke="#1E293B" stroke-width="1"/>
+  <line x1="0" y1="420" x2="1200" y2="420" stroke="#1E293B" stroke-width="1"/>
+  <line x1="400" y1="0" x2="400" y2="630" stroke="#1E293B" stroke-width="1"/>
+  <line x1="800" y1="0" x2="800" y2="630" stroke="#1E293B" stroke-width="1"/>
+
+  <!-- Accent bar -->
+  <rect x="0" y="0" width="8" height="630" fill="#3B82F6"/>
+
+  <!-- Logo mark -->
+  <rect x="80" y="80" width="64" height="64" rx="12" fill="#1E3A5F"/>
+  <path d="M92 100h40M92 112h28M92 124h34" stroke="#3B82F6" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="130" cy="124" r="7" fill="#3B82F6"/>
+  <circle cx="130" cy="124" r="3.5" fill="#0F172A"/>
+
+  <!-- Headline -->
+  <text x="80" y="230" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="700" font-size="64" fill="#F8FAFC">Steel City AI</text>
+  <text x="80" y="310" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="400" font-size="32" fill="#94A3B8">AI-Powered Workflow Automation</text>
+
+  <!-- Services pills -->
+  <rect x="80" y="360" width="220" height="44" rx="22" fill="#1E3A5F"/>
+  <text x="190" y="388" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#93C5FD" text-anchor="middle">Document AI</text>
+
+  <rect x="316" y="360" width="230" height="44" rx="22" fill="#1E3A5F"/>
+  <text x="431" y="388" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#93C5FD" text-anchor="middle">Customer Service</text>
+
+  <rect x="562" y="360" width="230" height="44" rx="22" fill="#1E3A5F"/>
+  <text x="677" y="388" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#93C5FD" text-anchor="middle">Marketing AI</text>
+
+  <rect x="808" y="360" width="230" height="44" rx="22" fill="#1E3A5F"/>
+  <text x="923" y="388" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-size="20" fill="#93C5FD" text-anchor="middle">Analytics</text>
+
+  <!-- Domain -->
+  <text x="80" y="560" font-family="'Inter', 'Helvetica Neue', Arial, sans-serif" font-weight="500" font-size="24" fill="#475569">steelcityai.com</text>
+
+  <!-- Decorative dots -->
+  <circle cx="1100" cy="100" r="60" fill="#1E3A5F" opacity="0.5"/>
+  <circle cx="1150" cy="180" r="30" fill="#3B82F6" opacity="0.15"/>
+</svg>

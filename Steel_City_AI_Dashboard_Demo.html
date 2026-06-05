@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steel City AI Dashboard Demo</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        
+        .presentation {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .title-slide {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 60px 40px;
+            text-align: center;
+        }
+        
+        .title-slide h1 {
+            font-size: 3em;
+            margin: 0 0 20px 0;
+            font-weight: 300;
+        }
+        
+        .title-slide h2 {
+            font-size: 1.5em;
+            margin: 0;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .slide {
+            padding: 40px;
+            border-bottom: 1px solid #eee;
+            min-height: 600px;
+        }
+        
+        .slide:last-child {
+            border-bottom: none;
+        }
+        
+        .slide-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .step-number {
+            background: #2a5298;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 20px;
+            font-size: 1.2em;
+        }
+        
+        .slide-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #1e3c72;
+            margin: 0;
+        }
+        
+        .screenshot-container {
+            margin: 20px 0;
+            text-align: center;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px dashed #dee2e6;
+        }
+        
+        .screenshot-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: contain;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .explanation {
+            background: #f8f9fa;
+            padding: 20px;
+            border-left: 4px solid #2a5298;
+            margin-top: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .explanation h4 {
+            margin: 0 0 10px 0;
+            color: #1e3c72;
+            font-size: 1.2em;
+        }
+        
+        .explanation p {
+            margin: 0;
+            line-height: 1.6;
+            color: #495057;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 500;
+        }
+        
+        .navigation {
+            background: #1e3c72;
+            color: white;
+            padding: 20px 40px;
+            text-align: center;
+        }
+        
+        .navigation p {
+            margin: 0;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation">
+        <!-- Title Slide -->
+        <div class="title-slide">
+            <h1>Steel City AI</h1>
+            <h2>Client Management & Project Dashboard Demo</h2>
+            <p style="margin-top: 30px; opacity: 0.8; font-size: 1.1em;">
+                Complete workflow demonstration from login to project dashboard management
+            </p>
+        </div>
+
+        <!-- Slide 1: Login Page -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">1</div>
+                <h3 class="slide-title">Admin Login Access</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/01-login-page.png" alt="Admin Login Interface" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Secure Administrator Access</h4>
+                <p>Steel City AI provides a secure admin portal for managing client relationships and projects. The login system uses <span class="highlight">credential-based authentication</span> with username "admin" and a secure password. This ensures only authorized personnel can access sensitive client data and project information.</p>
+            </div>
+        </div>
+
+        <!-- Slide 2: Post-Login Dashboard -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">2</div>
+                <h3 class="slide-title">Administrative Dashboard Overview</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/02-post-login.png" alt="Main Admin Dashboard" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Centralized Management Hub</h4>
+                <p>Upon successful login, administrators access the main dashboard providing <span class="highlight">centralized navigation</span> to all system features. This includes client management, project oversight, Google Workspace integrations, and system administration tools. The clean interface prioritizes quick access to frequently used functions.</p>
+            </div>
+        </div>
+
+        <!-- Slide 3: Clients List -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">3</div>
+                <h3 class="slide-title">Client Portfolio Management</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/03-clients-list.png" alt="Complete Client Portfolio" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Comprehensive Client Overview</h4>
+                <p>The clients page displays the complete portfolio including <span class="highlight">TechCorp Solutions</span>, <span class="highlight">Green Energy Partners</span>, and <span class="highlight">Downtown Restaurant Group</span>. Each client card shows key information like industry type, active projects, and engagement status. This view enables quick assessment of the entire client base and project pipeline.</p>
+            </div>
+        </div>
+
+        <!-- Slide 4: Client Details -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">4</div>
+                <h3 class="slide-title">Individual Client Project View</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/04-client-details.png" alt="TechCorp Solutions Project Details" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Detailed Client Project Management</h4>
+                <p>Clicking on a client reveals their complete project portfolio. For TechCorp Solutions, this shows projects like <span class="highlight">"AI Customer Service Integration"</span> at 65% completion and <span class="highlight">"Employee Productivity Dashboard"</span> in discovery phase. Each project displays status, progress, budget, and timeline information for comprehensive project oversight.</p>
+            </div>
+        </div>
+
+        <!-- Slide 5: Milestones Tab -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">5</div>
+                <h3 class="slide-title">Project Milestones & Dashboard Access</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/05-milestones-tab.png" alt="Project Milestones with Dashboard Access" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Milestone Tracking & Dashboard Integration</h4>
+                <p>The Milestones tab provides detailed project breakdown with individual milestone tracking. The critical <span class="highlight">"View Dashboard"</span> button appears for projects with created dashboards, enabling seamless navigation to comprehensive project analytics. This integration ensures stakeholders have immediate access to detailed project intelligence.</p>
+            </div>
+        </div>
+
+        <!-- Slide 6: Project Dashboard -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">6</div>
+                <h3 class="slide-title">Comprehensive Project Dashboard</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/06-project-dashboard.png" alt="Comprehensive Project Dashboard" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Advanced Project Analytics & Reporting</h4>
+                <p>The project dashboard provides <span class="highlight">real-time analytics</span> including progress charts, milestone completion status, recent updates, and project health metrics. This business intelligence view enables data-driven decision making with visual representations of project performance, timeline adherence, and milestone achievements.</p>
+            </div>
+        </div>
+
+        <!-- Slide 7: Second Client -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">7</div>
+                <h3 class="slide-title">Multi-Client Project Management</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/07-second-client.png" alt="Green Energy Partners Projects" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Scalable Client Management System</h4>
+                <p>Demonstrating system scalability, Green Energy Partners shows different project types including <span class="highlight">"Solar Installation Workflow"</span> and <span class="highlight">"Carbon Credit Tracking System"</span>. Each client maintains independent project portfolios while benefiting from consistent dashboard functionality and project management capabilities.</p>
+            </div>
+        </div>
+
+        <!-- Slide 8: Second Dashboard -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="step-number">8</div>
+                <h3 class="slide-title">Cross-Project Dashboard Consistency</h3>
+            </div>
+            
+            <div class="screenshot-container">
+                <img src="/screenshots/08-second-dashboard.png" alt="Green Energy Partners Dashboard" class="screenshot-image">
+            </div>
+            
+            <div class="explanation">
+                <h4>Standardized Dashboard Experience</h4>
+                <p>The second project dashboard demonstrates <span class="highlight">consistent functionality</span> across different clients and project types. Whether managing AI integration for TechCorp or renewable energy automation for Green Energy Partners, the dashboard maintains the same professional interface with project-specific data, ensuring familiar navigation and reliable reporting for all stakeholders.</p>
+            </div>
+        </div>
+
+        <!-- Navigation Footer -->
+        <div class="navigation">
+            <p><strong>Steel City AI Client Management System</strong> - Complete project lifecycle management with integrated dashboard functionality</p>
+        </div>
+    </div>
+</body>
+</html>

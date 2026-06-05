@@ -1,0 +1,3788 @@
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  BarChart3,
+  Bot,
+  Calendar,
+  CalendarDays,
+  CalendarPlus,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Copy,
+  Edit,
+  Eye,
+  FileText,
+  Hash,
+  Heart,
+  Image as ImageIcon,
+  Link,
+  Loader2,
+  Megaphone,
+  MessageSquare,
+  Palette,
+  PenLine,
+  PenTool,
+  Plus,
+  RefreshCw,
+  Search,
+  Send,
+  Share2,
+  Sparkles,
+  Star,
+  Target,
+  Trash2,
+  Upload,
+  UserCircle,
+  Video,
+  Wand2,
+  X,
+  Zap,
+} from 'lucide-react';
+import { SiFacebook, SiInstagram, SiX, SiLinkedin, SiYoutube } from 'react-icons/si';
+import { apiRequest, queryClient } from '@/lib/queryClient';
+import { useToast } from '@/hooks/use-toast';
+import PortalLayout from './PortalLayout';
+import { SocialPostPreview } from '@/components/SocialPostPreview';
+
+interface PortalSocialMediaProps {
+  clientSlug: string;
+}
+
+const PLATFORMS = [
+  { id: 'facebook', label: 'Facebook', icon: SiFacebook },
+  { id: 'instagram', label: 'Instagram', icon: SiInstagram },
+  { id: 'x', label: 'X', icon: SiX },
+  { id: 'linkedin', label: 'LinkedIn', icon: SiLinkedin },
+  { id: 'youtube', label: 'YouTube', icon: SiYoutube },
+];
+
+const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  draft: 'outline',
+  scheduled: 'secondary',
+  published: 'default',
+  failed: 'destructive',
+};
+
+const campaignStatusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+  draft: { label: 'Draft', variant: 'secondary' },
+  active: { label: 'Active', variant: 'default' },
+  paused: { label: 'Paused', variant: 'outline' },
+  completed: { label: 'Completed', variant: 'secondary' },
+};
+
+const createCampaignSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  description: z.string().optional(),
+  status: z.enum(['draft', 'active', 'paused', 'completed']).default('draft'),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  targetAudience: z.string().optional(),
+  goals: z.string().optional(),
+});
+
+const createBrandVoiceSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  tone: z.string().optional(),
+  style: z.string().optional(),
+  vocabulary: z.string().optional(),
+  avoidWords: z.string().optional(),
+  examplePosts: z.string().optional(),
+  isDefault: z.boolean().default(false),
+});
+
+const createAccountSchema = z.object({
+  platform: z.string().min(1, 'Platform is required'),
+  accountName: z.string().min(1, 'Account name is required'),
+  username: z.string().min(1, 'Username is required'),
+});
+
+type CreateCampaignForm = z.infer<typeof createCampaignSchema>;
+type CreateBrandVoiceForm = z.infer<typeof createBrandVoiceSchema>;
+type CreateAccountForm = z.infer<typeof createAccountSchema>;
+
+function getStatusLabel(status: string) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function formatDate(date: string | null | undefined) {
+  if (!date) return '';
+  return new Date(date).toLocaleDateString();
+}
+
+function formatDateTime(date: string | null | undefined) {
+  if (!date) return '';
+  return new Date(date).toLocaleString();
+}
+
+function DashboardTab() {
+  const { data: postsData, isLoading: postsLoading } = useQuery<any>({
+    queryKey: ['/api/portal/social/posts'],
+  });
+  const { data: campaignsData, isLoading: campaignsLoading } = useQuery<any>({
+    queryKey: ['/api/portal/social/campaigns'],
+  });
+  const { data: accountsData } = useQuery<any>({
+    queryKey: ['/api/portal/social/accounts'],
+  });
+
+  const isLoading = postsLoading || campaignsLoading;
+  const posts = Array.isArray(postsData) ? postsData : postsData?.posts || [];
+  const campaigns = Array.isArray(campaignsData) ? campaignsData : campaignsData?.campaigns || [];
+  const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.accounts || [];
+
+  const scheduled = posts.filter((p: any) => p.status === 'scheduled').length;
+  const published = posts.filter((p: any) => p.status === 'published').length;
+  const activeCampaigns = campaigns.filter((c: any) => c.status === 'active').length;
+
+  return (
+    <div className="space-y-6">
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-muted-foreground text-sm">Total Posts</div>
+                <p className="text-3xl font-bold mt-1">{posts.length}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-muted-foreground text-sm flex items-center gap-1"><Clock className="h-3 w-3" /> Scheduled</div>
+                <p className="text-3xl font-bold mt-1">{scheduled}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-muted-foreground text-sm flex items-center gap-1"><Send className="h-3 w-3" /> Published</div>
+                <p className="text-3xl font-bold mt-1">{published}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-muted-foreground text-sm flex items-center gap-1"><Megaphone className="h-3 w-3" /> Active Campaigns</div>
+                <p className="text-3xl font-bold mt-1">{activeCampaigns}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5" />Recent Posts</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {posts.length > 0 ? (
+                  <div className="space-y-3">
+                    {posts.slice(0, 5).map((post: any) => (
+                      <div key={post.id} className="flex items-start justify-between gap-3 p-3 rounded-md border">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm line-clamp-2">{post.content}</p>
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {(post.platforms || []).map((p: string) => {
+                              const platform = PLATFORMS.find((pl) => pl.id === p);
+                              if (!platform) return null;
+                              const Icon = platform.icon;
+                              return <Icon key={p} className="h-3 w-3 text-muted-foreground" />;
+                            })}
+                            <Badge variant={STATUS_VARIANTS[post.status] || 'outline'}>
+                              {getStatusLabel(post.status || 'draft')}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">{formatDate(post.scheduledAt || post.createdAt)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No posts yet</p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Megaphone className="h-5 w-5" />Active Campaigns</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {campaigns.filter((c: any) => c.status === 'active').length > 0 ? (
+                  <div className="space-y-3">
+                    {campaigns
+                      .filter((c: any) => c.status === 'active')
+                      .slice(0, 5)
+                      .map((c: any) => (
+                        <div key={c.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
+                          <div>
+                            <p className="font-medium">{c.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {formatDate(c.startDate)} - {formatDate(c.endDate)}
+                            </p>
+                          </div>
+                          <Badge variant="default">Active</Badge>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No active campaigns</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function CreatePostTab() {
+  const { toast } = useToast();
+  const [mode, setMode] = useState<'manual' | 'ai' | 'autonomous'>('manual');
+  const [content, setContent] = useState('');
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [scheduledAt, setScheduledAt] = useState('');
+  const [hashtags, setHashtags] = useState('');
+  const [briefing, setBriefing] = useState('');
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [vibeDirection, setVibeDirection] = useState('');
+  const [reviewResult, setReviewResult] = useState<any>(null);
+  const [selectedBrandVoiceId, setSelectedBrandVoiceId] = useState('');
+  const [researchTopic, setResearchTopic] = useState('');
+  const [researchResult, setResearchResult] = useState<any>(null);
+  const [designResult, setDesignResult] = useState<any>(null);
+  const [autonomousResult, setAutonomousResult] = useState<any>(null);
+  const [showResearch, setShowResearch] = useState(false);
+  const [autoPost, setAutoPost] = useState(false);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
+  const [mediaUrlInput, setMediaUrlInput] = useState('');
+  const [isAddingUrl, setIsAddingUrl] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [videoSource, setVideoSource] = useState<'stock' | 'ai'>('stock');
+  const [videoPrompt, setVideoPrompt] = useState('');
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
+  const [isSavingPost, setIsSavingPost] = useState(false);
+  const [isEditingContent, setIsEditingContent] = useState(false);
+  const [scrapeUrlInput, setScrapeUrlInput] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapedData, setScrapedData] = useState<any>(null);
+
+  const { data: brandVoices } = useQuery<any[]>({
+    queryKey: ['/api/portal/social/brand-voice'],
+  });
+  const { data: campaignsData } = useQuery<any[]>({
+    queryKey: ['/api/portal/social/campaigns'],
+  });
+  const campaigns = Array.isArray(campaignsData) ? campaignsData : [];
+
+  const togglePlatform = (platformId: string) => {
+    setSelectedPlatforms((prev) =>
+      prev.includes(platformId) ? prev.filter((p) => p !== platformId) : [...prev, platformId]
+    );
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploadingFiles(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+      const res = await fetch('/api/portal/social/media/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.urls) setMediaUrls((prev) => [...prev, ...data.urls]);
+      toast({ title: 'Files uploaded', description: `${data.urls?.length || 0} file(s) uploaded.` });
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    }
+    setIsUploadingFiles(false);
+    e.target.value = '';
+  };
+
+  const handleAddMediaUrl = async () => {
+    if (!mediaUrlInput.trim()) return;
+    setIsAddingUrl(true);
+    try {
+      const res = await apiRequest('POST', '/api/portal/social/media/from-url', { url: mediaUrlInput });
+      const data = await res.json();
+      if (data.url) {
+        setMediaUrls((prev) => [...prev, data.url]);
+        setMediaUrlInput('');
+        toast({ title: 'Media added', description: 'Media downloaded and attached.' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Failed to add media', description: err.message, variant: 'destructive' });
+    }
+    setIsAddingUrl(false);
+  };
+
+  const handleGenerateImage = async (description: string) => {
+    setIsGeneratingImage(true);
+    try {
+      const res = await apiRequest('POST', '/api/portal/social/ai/generate-image', { description });
+      const data = await res.json();
+      if (data.url) {
+        setMediaUrls((prev) => [...prev, data.url]);
+        toast({ title: 'Image generated', description: 'AI image has been generated and attached.' });
+      }
+    } catch (err: any) {
+      toast({ title: 'Image generation failed', description: err.message, variant: 'destructive' });
+    }
+    setIsGeneratingImage(false);
+  };
+
+  const handleGenerateVideo = async () => {
+    setIsGeneratingVideo(true);
+    try {
+      const desc = videoPrompt || briefing || 'social media video';
+      if (videoSource === 'stock') {
+        const res = await apiRequest('POST', '/api/portal/social/video/generate', {
+          topic: desc,
+          source: 'stock',
+        });
+        const data = await res.json();
+        if (data.videos?.length > 0) {
+          const videoUrl = data.videos[0].url;
+          const dlRes = await apiRequest('POST', '/api/portal/social/media/from-url', { url: videoUrl });
+          const dlData = await dlRes.json();
+          if (dlData.url) setMediaUrls((prev) => [...prev, dlData.url]);
+          toast({ title: 'Stock video found', description: 'Video has been attached to your post.' });
+        } else {
+          toast({ title: 'No videos found', description: 'Try a different search term.', variant: 'destructive' });
+        }
+      } else {
+        const res = await apiRequest('POST', '/api/portal/social/ai/generate-video', {
+          description: desc,
+          duration: 15,
+        });
+        const data = await res.json();
+        if (data.url) {
+          setMediaUrls((prev) => [...prev, data.url]);
+          toast({ title: 'AI video generated', description: 'Video has been attached to your post.' });
+        }
+      }
+    } catch (err: any) {
+      toast({ title: 'Video generation failed', description: err.message, variant: 'destructive' });
+    }
+    setIsGeneratingVideo(false);
+  };
+
+  const researchMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/research', {
+        topic: researchTopic,
+        platforms: selectedPlatforms,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setResearchResult(data);
+      toast({ title: 'Research complete', description: 'Trend insights are ready below.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Research failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const orchestrateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/orchestrate', {
+        briefing,
+        platforms: selectedPlatforms,
+        brandVoiceId: selectedBrandVoiceId || undefined,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAiResult(data);
+      toast({ title: 'AI content generated', description: 'Review the generated content below.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const generatePostMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/generate-post', {
+        prompt: briefing,
+        platforms: selectedPlatforms,
+        brandVoiceId: selectedBrandVoiceId || undefined,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      const generated = data?.content || data?.generatedContent || '';
+      if (generated) setContent(generated);
+      setAiResult(data);
+      toast({ title: 'Post generated', description: 'Content is ready for editing.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Generation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const designMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/design', {
+        content: content || aiResult?.content || '',
+        platforms: selectedPlatforms,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setDesignResult(data);
+      toast({ title: 'Design suggestions ready', description: 'See visual recommendations below.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Design suggestions failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const vibeEditMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/vibe-edit', {
+        content: content || aiResult?.content,
+        direction: vibeDirection,
+        platforms: selectedPlatforms,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAiResult((prev: any) => ({ ...prev, ...data }));
+      if (data.content) setContent(data.content);
+      setVibeDirection('');
+      toast({ title: 'Vibe adjusted', description: 'Content has been updated.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Vibe edit failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const reviewMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/review', {
+        content: content || aiResult?.content,
+        platforms: selectedPlatforms,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setReviewResult(data);
+      toast({ title: 'Review complete', description: 'See your score and suggestions.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Review failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const autonomousMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/ai/autonomous', {
+        briefing,
+        platforms: selectedPlatforms,
+        brandVoiceId: selectedBrandVoiceId || undefined,
+        autoPost,
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setAutonomousResult(data);
+      const desc = data.autoPost
+        ? `Post scheduled for ${new Date(data.aiResults?.schedule?.scheduledAt).toLocaleString()}.`
+        : 'Draft saved — review and schedule or post it from My Posts.';
+      toast({ title: 'AI creation complete', description: desc });
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Autonomous creation failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const createPostMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/portal/social/posts', {
+        content,
+        platforms: selectedPlatforms,
+        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+        hashtags: hashtags.split(',').map((h) => h.trim()).filter(Boolean),
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        aiGenerated: !!aiResult,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Post created', description: 'Your post has been saved.' });
+      setContent('');
+      setSelectedPlatforms([]);
+      setScheduledAt('');
+      setHashtags('');
+      setMediaUrls([]);
+      setAiResult(null);
+      setReviewResult(null);
+      setDesignResult(null);
+      setBriefing('');
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to create post', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const useAiContent = () => {
+    if (aiResult?.content) setContent(aiResult.content);
+    if (aiResult?.hashtags) {
+      setHashtags(Array.isArray(aiResult.hashtags) ? aiResult.hashtags.join(', ') : aiResult.hashtags);
+    }
+    toast({ title: 'Content applied', description: 'AI content has been loaded into the editor.' });
+  };
+
+  const handleSaveAsPost = async (status: 'draft' | 'scheduled', scheduledAt?: string) => {
+    const postContent = aiResult?.content || content || briefing;
+    if (!postContent) {
+      toast({ title: 'No content', description: 'Generate content first before saving.', variant: 'destructive' });
+      return;
+    }
+    setIsSavingPost(true);
+    try {
+      const payload: any = {
+        content: postContent,
+        platforms: selectedPlatforms.length > 0 ? selectedPlatforms : ['facebook'],
+        hashtags: aiResult?.hashtags || (hashtags ? hashtags.split(',').map((t: string) => t.trim()).filter(Boolean) : []),
+        mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined,
+        status,
+        scheduledAt: scheduledAt || undefined,
+      };
+      await apiRequest('POST', '/api/portal/social/posts', payload);
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+      toast({
+        title: status === 'draft' ? 'Saved as draft' : 'Post scheduled',
+        description: status === 'scheduled' && scheduledAt
+          ? `Scheduled for ${new Date(scheduledAt).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })} at ${new Date(scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+          : 'Your post has been saved to the Posts tab.',
+      });
+    } catch (err: any) {
+      toast({ title: 'Save failed', description: err.message || 'Could not save post', variant: 'destructive' });
+    } finally {
+      setIsSavingPost(false);
+    }
+  };
+
+  const handleScrapeUrl = async () => {
+    if (!scrapeUrlInput.trim()) return;
+    setIsScraping(true);
+    setScrapedData(null);
+    try {
+      const res = await apiRequest('POST', '/api/portal/social/scrape', { url: scrapeUrlInput.trim() });
+      const data = await res.json();
+      setScrapedData(data);
+      if (data.images && data.images.length > 0) {
+        setMediaUrls((prev) => {
+          const existing = new Set(prev);
+          const newImages = data.images.filter((img: string) => !existing.has(img));
+          return [...prev, ...newImages];
+        });
+      }
+      if (data.title || data.description) {
+        const context = [data.title, data.description].filter(Boolean).join(' — ');
+        if (!briefing.trim()) {
+          setBriefing(context);
+        }
+      }
+      toast({
+        title: 'URL scraped',
+        description: `Found ${data.images?.length || 0} images. ${data.title ? `"${data.title}"` : 'Content extracted.'}`,
+      });
+    } catch (err: any) {
+      toast({ title: 'Scrape failed', description: err.message || 'Could not scrape URL', variant: 'destructive' });
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  const PlatformSelector = () => (
+    <div className="space-y-2">
+      <Label>Platforms</Label>
+      <div className="flex flex-wrap gap-3">
+        {PLATFORMS.map((platform) => {
+          const Icon = platform.icon;
+          return (
+            <label key={platform.id} className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={selectedPlatforms.includes(platform.id)}
+                onCheckedChange={() => togglePlatform(platform.id)}
+              />
+              <Icon className="h-4 w-4" />
+              <span className="text-sm">{platform.label}</span>
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant={mode === 'manual' ? 'default' : 'outline'} onClick={() => setMode('manual')}>
+          <PenLine className="h-4 w-4 mr-2" />
+          Manual
+        </Button>
+        <Button variant={mode === 'ai' ? 'default' : 'outline'} onClick={() => setMode('ai')}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          AI-Assisted
+        </Button>
+        <Button variant={mode === 'autonomous' ? 'default' : 'outline'} onClick={() => setMode('autonomous')}>
+          <Zap className="h-4 w-4 mr-2" />
+          Create Everything
+        </Button>
+      </div>
+
+      {mode === 'autonomous' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Zap className="h-5 w-5" />
+              Fully Autonomous Creation
+            </CardTitle>
+            <CardDescription>
+              AI researches trends, writes optimized content, generates visuals, and schedules your post — all automatically.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>What should this post be about?</Label>
+              <Textarea
+                value={briefing}
+                onChange={(e) => setBriefing(e.target.value)}
+                placeholder="e.g., New listing in Pittsburgh, PA — 3BR/2BA, move-in ready. Target first-time buyers."
+                className="min-h-[100px]"
+              />
+            </div>
+
+            <PlatformSelector />
+
+            {Array.isArray(brandVoices) && brandVoices.length > 0 && (
+              <div className="space-y-2">
+                <Label>Brand Voice (optional)</Label>
+                <Select value={selectedBrandVoiceId} onValueChange={setSelectedBrandVoiceId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default brand voice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Default</SelectItem>
+                    {brandVoices.map((bv: any) => (
+                      <SelectItem key={bv.id} value={bv.id}>{bv.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 p-3 rounded-md border bg-muted/40">
+              <div>
+                <Label htmlFor="auto-post-switch" className="text-sm font-medium cursor-pointer">Auto-post when done</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Off: saves as draft with AI schedule recommendation. On: automatically schedules the post.
+                </p>
+              </div>
+              <Switch id="auto-post-switch" checked={autoPost} onCheckedChange={setAutoPost} />
+            </div>
+
+            <Button
+              onClick={() => autonomousMutation.mutate()}
+              disabled={!briefing.trim() || selectedPlatforms.length === 0 || autonomousMutation.isPending}
+              className="w-full"
+              size="lg"
+            >
+              {autonomousMutation.isPending ? (
+                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />AI is working...</>
+              ) : (
+                <><Zap className="h-4 w-4 mr-2" />Create Everything</>
+              )}
+            </Button>
+
+            {autonomousMutation.isPending && (
+              <div className="space-y-2 p-3 rounded-md bg-muted">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <span className="text-sm font-medium">AI is working...</span>
+                </div>
+                <div className="space-y-1.5">
+                  {[
+                    { label: 'Researching trends & audience' },
+                    { label: 'Writing optimized content' },
+                    { label: 'Planning visual design' },
+                    { label: 'Generating visual assets' },
+                    { label: 'Setting optimal schedule' },
+                    { label: 'Saving post' },
+                  ].map((step) => (
+                    <div key={step.label} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CheckCircle className="h-3 w-3 text-muted-foreground/50" />
+                      <span>{step.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">This may take 1–2 minutes. Images are being created by AI.</p>
+              </div>
+            )}
+
+            {autonomousResult && !autonomousMutation.isPending && (
+              <div className="p-3 rounded-md bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                    {autonomousResult.autoPost ? 'Post Created & Scheduled' : 'Draft Saved with AI Recommendation'}
+                  </span>
+                </div>
+                {autonomousResult.aiResults?.schedule?.scheduledAt && (
+                  <p className="text-xs text-muted-foreground">
+                    {autonomousResult.autoPost ? 'Scheduled for' : 'AI recommends posting'}: {new Date(autonomousResult.aiResults.schedule.scheduledAt).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })} at {new Date(autonomousResult.aiResults.schedule.scheduledAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                )}
+                {!autonomousResult.autoPost && (
+                  <p className="text-xs text-muted-foreground">Go to the Posts tab to review, edit, schedule, or publish.</p>
+                )}
+                {(autonomousResult.aiResults?.content || autonomousResult.post?.content) && (
+                  <div className="p-3 rounded-md bg-white/60 dark:bg-black/20 border border-green-100 dark:border-green-900/30">
+                    <p className="whitespace-pre-wrap text-sm">{autonomousResult.aiResults?.content || autonomousResult.post?.content}</p>
+                  </div>
+                )}
+                {autonomousResult.aiResults?.generatedImages?.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">{autonomousResult.aiResults.generatedImages.length} AI-generated visual(s) attached</p>
+                    <div className="flex flex-wrap gap-2">
+                      {autonomousResult.aiResults.generatedImages.map((url: string, i: number) => (
+                        <img key={i} src={url} alt={`Generated visual ${i + 1}`} className="h-20 w-20 rounded-md object-cover border border-green-200 dark:border-green-800" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {autonomousResult.aiResults?.hashtags?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {autonomousResult.aiResults.hashtags.map((tag: string, i: number) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        <Hash className="h-3 w-3 mr-1" />{tag.replace(/^#/, '')}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {autonomousResult.aiResults?.review?.score !== undefined && (
+                  <p className="text-xs text-muted-foreground">Score: {autonomousResult.aiResults.review.score}/100</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {mode === 'ai' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              AI Content Studio
+            </CardTitle>
+            <CardDescription>Research trends, generate content with brand voice, then refine before posting</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <PlatformSelector />
+
+            {Array.isArray(brandVoices) && brandVoices.length > 0 && (
+              <div className="space-y-2">
+                <Label>Brand Voice (optional)</Label>
+                <Select value={selectedBrandVoiceId} onValueChange={setSelectedBrandVoiceId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default brand voice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Default</SelectItem>
+                    {brandVoices.map((bv: any) => (
+                      <SelectItem key={bv.id} value={bv.id}>{bv.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="rounded-md border p-4 space-y-3">
+              <button
+                className="flex items-center justify-between w-full text-left"
+                onClick={() => setShowResearch((v) => !v)}
+              >
+                <div className="flex items-center gap-2 font-medium">
+                  <Target className="h-4 w-4" />
+                  Research Trends (optional)
+                </div>
+                <span className="text-muted-foreground text-sm">{showResearch ? 'Hide' : 'Show'}</span>
+              </button>
+              {showResearch && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div className="flex gap-2">
+                    <Input
+                      value={researchTopic}
+                      onChange={(e) => setResearchTopic(e.target.value)}
+                      placeholder="e.g., real estate Pittsburgh 2025"
+                      className="flex-1"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => researchMutation.mutate()}
+                      disabled={!researchTopic.trim() || selectedPlatforms.length === 0 || researchMutation.isPending}
+                    >
+                      {researchMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Target className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {researchResult && (
+                    <div className="p-3 rounded-md bg-muted/30 border space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="font-medium">Research Results</span>
+                        {researchResult.research_confidence && (
+                          <Badge variant={researchResult.research_confidence === 'high' ? 'default' : researchResult.research_confidence === 'medium' ? 'secondary' : 'outline'}>
+                            Confidence: {researchResult.research_confidence}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {researchResult.content_angles && Array.isArray(researchResult.content_angles) && researchResult.content_angles.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="font-medium">Content Angles</span>
+                          {researchResult.content_angles.map((angle: string, i: number) => (
+                            <div key={i} className="rounded-md bg-muted p-2">
+                              <p className="text-sm">{angle}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {researchResult.platforms_research && Object.keys(researchResult.platforms_research).length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="font-medium">Platform Research</span>
+                          {Object.entries(researchResult.platforms_research).map(([platform, data]: [string, any]) => {
+                            const pl = PLATFORMS.find((p) => p.id === platform);
+                            const Icon = pl?.icon;
+                            return (
+                              <div key={platform} className="rounded-md bg-muted p-2.5">
+                                <div className="flex items-center gap-1.5 mb-1">
+                                  {Icon && <Icon className="h-3 w-3" />}
+                                  <span className="font-medium capitalize">{pl?.label || platform}</span>
+                                  {data?.hashtag_confidence && (
+                                    <Badge variant="outline" className="text-xs ml-auto">Hashtag confidence: {data.hashtag_confidence}</Badge>
+                                  )}
+                                </div>
+                                {data?.tone && <p className="text-xs text-muted-foreground">Tone: {data.tone}</p>}
+                                {data?.best_post_window && <p className="text-xs text-muted-foreground">Best time: {data.best_post_window}</p>}
+                                {data?.hashtags && Array.isArray(data.hashtags) && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {data.hashtags.map((h: string, j: number) => (
+                                      <Badge key={j} variant="secondary" className="text-xs">#{String(h).replace(/^#/, '')}</Badge>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {researchResult.cautions && Array.isArray(researchResult.cautions) && researchResult.cautions.length > 0 && (
+                        <div className="rounded-md border-l-2 border-yellow-500 bg-yellow-500/5 p-2.5 space-y-1">
+                          <span className="font-medium text-yellow-600 dark:text-yellow-400">Cautions</span>
+                          {researchResult.cautions.map((c: string, i: number) => (
+                            <p key={i} className="text-xs text-muted-foreground">{c}</p>
+                          ))}
+                        </div>
+                      )}
+
+                      {researchResult.bestHashtags && Array.isArray(researchResult.bestHashtags) && researchResult.bestHashtags.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {researchResult.bestHashtags.map((h: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-xs">#{h.replace(/^#/, '')}</Badge>
+                          ))}
+                        </div>
+                      )}
+
+                      {researchResult.youtubeShorts && researchResult.youtubeShorts.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="font-medium flex items-center gap-1.5">
+                            <SiYoutube className="h-3.5 w-3.5 text-red-600" />
+                            YouTube Shorts
+                          </span>
+                          {researchResult.youtubeShorts.map((s: any, i: number) => (
+                            <div key={i} className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline underline-offset-2 break-all">{s.title}</a>
+                                {s.relevance && <p className="text-xs text-muted-foreground mt-0.5">{s.relevance}</p>}
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const linkText = `\n\nCheck out: ${s.title} - ${s.url}`;
+                                  if (content && !content.includes(s.url)) {
+                                    setContent((prev) => prev + linkText);
+                                  } else if (!content) {
+                                    setContent(`Check out: ${s.title} - ${s.url}`);
+                                  }
+                                  toast({ title: 'Link added', description: 'YouTube Short link added to your content.' });
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add to Post
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Brief / Topic</Label>
+              <Textarea
+                value={briefing}
+                onChange={(e) => setBriefing(e.target.value)}
+                placeholder="Describe what you want to post about..."
+                className="min-h-[90px]"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                onClick={() => orchestrateMutation.mutate()}
+                disabled={!briefing.trim() || selectedPlatforms.length === 0 || orchestrateMutation.isPending || generatePostMutation.isPending}
+                className="col-span-2"
+              >
+                {orchestrateMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Full AI Workflow
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => generatePostMutation.mutate()}
+                disabled={!briefing.trim() || selectedPlatforms.length === 0 || orchestrateMutation.isPending || generatePostMutation.isPending}
+              >
+                {generatePostMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <PenTool className="h-4 w-4 mr-2" />
+                )}
+                Generate Post
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => researchMutation.mutate()}
+                disabled={!briefing.trim() || selectedPlatforms.length === 0 || researchMutation.isPending}
+              >
+                {researchMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4 mr-2" />
+                )}
+                Research Trends
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => designMutation.mutate()}
+                disabled={!briefing.trim() || selectedPlatforms.length === 0 || designMutation.isPending}
+              >
+                {designMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Palette className="h-4 w-4 mr-2" />
+                )}
+                Design Suggestions
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => reviewMutation.mutate()}
+                disabled={(!content && !briefing.trim()) || selectedPlatforms.length === 0 || reviewMutation.isPending}
+              >
+                {reviewMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Eye className="h-4 w-4 mr-2" />
+                )}
+                Review Post
+              </Button>
+            </div>
+
+            {aiResult && (
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <h4 className="font-semibold">Generated Content</h4>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant={isEditingContent ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setIsEditingContent(!isEditingContent)}
+                    >
+                      <PenLine className="h-4 w-4 mr-1" />
+                      {isEditingContent ? "Done Editing" : "Edit Content"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const text = aiResult.content || '';
+                        navigator.clipboard.writeText(text);
+                        toast({ title: "Copied", description: "Content copied to clipboard." });
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-1" />
+                      Copy Text
+                    </Button>
+                  </div>
+                </div>
+
+                {isEditingContent ? (
+                  <div className="space-y-3">
+                    <Textarea
+                      className="min-h-[160px]"
+                      value={aiResult.content || ''}
+                      onChange={(e) => setAiResult((prev: any) => ({ ...prev, content: e.target.value }))}
+                    />
+                    {aiResult.hashtags && aiResult.hashtags.length > 0 && (
+                      <div>
+                        <Label className="text-xs text-muted-foreground mb-1 block">Hashtags</Label>
+                        <Input
+                          value={(Array.isArray(aiResult.hashtags) ? aiResult.hashtags : [aiResult.hashtags]).join(', ')}
+                          onChange={(e) => {
+                            const tags = e.target.value.split(',').map((t: string) => t.trim()).filter(Boolean);
+                            setAiResult((prev: any) => ({ ...prev, hashtags: tags }));
+                          }}
+                          placeholder="Edit hashtags (comma-separated)"
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <SocialPostPreview
+                    content={aiResult.content}
+                    hashtags={aiResult.hashtags}
+                    mediaUrls={mediaUrls.length > 0 ? mediaUrls : undefined}
+                    platform={selectedPlatforms[0] || 'facebook'}
+                    accountName={(() => {
+                      const acc = accounts.find((a: any) => a.platform === (selectedPlatforms[0] || 'facebook'));
+                      return acc?.accountName || acc?.name || 'Your Page';
+                    })()}
+                    accountImage={(() => {
+                      const acc = accounts.find((a: any) => a.platform === (selectedPlatforms[0] || 'facebook'));
+                      return acc?.accountImage || undefined;
+                    })()}
+                  />
+                )}
+
+                {aiResult.platformVersions && (
+                  <div>
+                    <Label className="text-muted-foreground">Platform Versions</Label>
+                    <div className="space-y-2 mt-1">
+                      {Object.entries(aiResult.platformVersions).map(([platform, version]: [string, any]) => {
+                        const pl = PLATFORMS.find((p) => p.id === platform);
+                        const Icon = pl?.icon;
+                        return (
+                          <div key={platform} className="p-3 rounded-md border">
+                            <div className="flex items-center gap-2 mb-1">
+                              {Icon && <Icon className="h-4 w-4" />}
+                              <span className="font-medium text-sm">{pl?.label || platform}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{typeof version === 'string' ? version : version?.content || JSON.stringify(version)}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2 border-t flex-wrap">
+                  <Button
+                    variant="outline"
+                    onClick={() => designMutation.mutate()}
+                    disabled={designMutation.isPending}
+                  >
+                    {designMutation.isPending ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Palette className="h-4 w-4 mr-1" />}
+                    Get Design Suggestions
+                  </Button>
+                  <Button onClick={useAiContent} variant="outline">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Use This Content
+                  </Button>
+                  <Button
+                    onClick={() => handleSaveAsPost('draft')}
+                    disabled={isSavingPost}
+                    variant="outline"
+                  >
+                    {isSavingPost ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FileText className="h-4 w-4 mr-1" />}
+                    Save as Draft
+                  </Button>
+                  <Button
+                    onClick={() => handleSaveAsPost('scheduled')}
+                    disabled={isSavingPost}
+                  >
+                    {isSavingPost ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Send className="h-4 w-4 mr-1" />}
+                    Create Post
+                  </Button>
+                </div>
+
+                {designResult && (
+                  <div className="p-3 rounded-md border bg-muted/30 space-y-3">
+                    <Label className="text-muted-foreground">Design Suggestions</Label>
+
+                    {designResult.style && (
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline">{designResult.style}</Badge>
+                        {designResult.mood && <Badge variant="secondary">{designResult.mood}</Badge>}
+                        {designResult.aspect_ratio && <Badge variant="outline">{designResult.aspect_ratio}</Badge>}
+                      </div>
+                    )}
+
+                    {designResult.image_prompt && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">AI Image Brief</h4>
+                        <div className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                          <p className="text-sm flex-1">{designResult.image_prompt}</p>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleGenerateImage(designResult.image_prompt)}
+                            disabled={isGeneratingImage}
+                          >
+                            {isGeneratingImage ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                            Generate
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {designResult.visualSuggestions && Array.isArray(designResult.visualSuggestions) && designResult.visualSuggestions.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Visual Ideas</h4>
+                        {designResult.visualSuggestions.map((s: any, i: number) => {
+                          const desc = typeof s === 'object' ? (s.description || JSON.stringify(s)) : String(s);
+                          const isVideo = desc.startsWith('[VIDEO]');
+                          return (
+                            <div key={i} className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <Badge variant="outline" className="text-xs mb-1 capitalize">
+                                  {isVideo ? <Video className="h-3 w-3 mr-1" /> : <ImageIcon className="h-3 w-3 mr-1" />}
+                                  {isVideo ? 'Video' : 'Image'}
+                                </Badge>
+                                <p className="text-sm">{isVideo ? desc.replace('[VIDEO]', '').trim() : desc}</p>
+                              </div>
+                              {!isVideo && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => handleGenerateImage(desc)}
+                                  disabled={isGeneratingImage}
+                                >
+                                  {isGeneratingImage ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                                  Generate
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {designResult.captions && Array.isArray(designResult.captions) && designResult.captions.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Alternative Captions</h4>
+                        {designResult.captions.map((c: string, i: number) => (
+                          <div key={i} className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                            <p className="text-sm flex-1">{c}</p>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setContent(c);
+                                toast({ title: 'Applied', description: 'Caption loaded into the editor.' });
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {designResult.colorSchemes && Object.keys(designResult.colorSchemes).length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium">Color Palette</h4>
+                        <div className="flex gap-2">
+                          {Object.entries(designResult.colorSchemes).map(([name, color]: [string, any]) => (
+                            <div key={name} className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: typeof color === 'string' ? color : '#ccc' }} />
+                              <span className="text-xs text-muted-foreground capitalize">{name}</span>
+                            </div>
+                          ))}
+                          {designResult.color_palette && Array.isArray(designResult.color_palette) && designResult.color_palette.map((hex: string, i: number) => (
+                            <div key={`p${i}`} className="flex items-center gap-1.5">
+                              <div className="w-6 h-6 rounded-md border" style={{ backgroundColor: hex }} />
+                              <span className="text-xs text-muted-foreground">{hex}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!designResult.image_prompt && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleGenerateImage(designResult.visualSuggestions?.[0] || briefing || 'social media post image')}
+                        disabled={isGeneratingImage}
+                      >
+                        {isGeneratingImage ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                        Generate AI Image
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {aiResult?.research && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Research Findings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {typeof aiResult.research === 'object' && !Array.isArray(aiResult.research) ? (
+              <div className="space-y-3">
+                {aiResult.research.trends && Array.isArray(aiResult.research.trends) && aiResult.research.trends.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Trending Topics</h4>
+                    <div className="space-y-1.5">
+                      {aiResult.research.trends.map((trend: any, i: number) => (
+                        <div key={i} className="rounded-md bg-muted p-2.5">
+                          <p className="text-sm font-medium">{typeof trend === 'string' ? trend : (trend.name || JSON.stringify(trend))}</p>
+                          {trend.description && <p className="text-xs text-muted-foreground mt-0.5">{trend.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {aiResult.research.suggestions && Array.isArray(aiResult.research.suggestions) && aiResult.research.suggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Suggestions</h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+                      {aiResult.research.suggestions.map((s: any, i: number) => (
+                        <li key={i}>{typeof s === 'string' ? s : JSON.stringify(s)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {aiResult.research.optimalTimes && Object.keys(aiResult.research.optimalTimes).length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <h4 className="text-sm font-medium flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        Best Times to Post
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const bestTimes = aiResult.research.optimalTimes;
+                          const platforms = selectedPlatforms.length > 0 ? selectedPlatforms : ['facebook'];
+                          const platformKey = platforms[0];
+                          const ptData = bestTimes[platformKey];
+                          if (!ptData) {
+                            toast({ title: 'Schedule applied', description: 'No specific time data found for selected platform.' });
+                            return;
+                          }
+                          const ptStr = typeof ptData === 'string' ? ptData : JSON.stringify(ptData);
+                          const dayMatch = ptStr.match(/(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i);
+                          const timeMatch = ptStr.match(/(\d{1,2})(?::00)?\s*(AM|PM)/i);
+                          const now = new Date();
+                          const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                          let targetDay = dayMatch ? dayMatch[1] : 'Wednesday';
+                          let targetHour = 11;
+                          if (timeMatch) {
+                            let hr = parseInt(timeMatch[1]);
+                            if (timeMatch[2].toUpperCase() === 'PM' && hr !== 12) hr += 12;
+                            if (timeMatch[2].toUpperCase() === 'AM' && hr === 12) hr = 0;
+                            targetHour = hr;
+                          }
+                          for (let offset = 1; offset <= 14; offset++) {
+                            const candidate = new Date(now.getTime() + offset * 24 * 60 * 60 * 1000);
+                            if (dayNames[candidate.getDay()].toLowerCase() === targetDay.toLowerCase()) {
+                              candidate.setHours(targetHour, 0, 0, 0);
+                              if (candidate > now) {
+                                const postContent = aiResult?.content || content || briefing;
+                                if (postContent) {
+                                  handleSaveAsPost('scheduled', candidate.toISOString());
+                                } else {
+                                  toast({ title: 'No content', description: 'Generate content first before scheduling.', variant: 'destructive' });
+                                }
+                                return;
+                              }
+                            }
+                          }
+                          toast({ title: 'Schedule note', description: 'Could not find an upcoming matching day.' });
+                          handleSaveAsPost('scheduled', new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString());
+                        }}
+                      >
+                        <Calendar className="h-3 w-3 mr-1" />
+                        Apply Schedule
+                      </Button>
+                    </div>
+                    <div className="space-y-1.5">
+                      {Object.entries(aiResult.research.optimalTimes).map(([platform, time]: [string, any]) => {
+                        const platformInfo = PLATFORMS.find(p => p.id === platform);
+                        const PIcon = platformInfo?.icon;
+                        const timeData = typeof time === 'string' ? time : (typeof time === 'object' && time !== null ? (() => {
+                          const parts: string[] = [];
+                          if (time.best_days && Array.isArray(time.best_days)) parts.push('Days: ' + time.best_days.join(', '));
+                          if (time.best_times && Array.isArray(time.best_times)) parts.push('Times: ' + time.best_times.join(', '));
+                          if (time.frequency) parts.push('Frequency: ' + time.frequency);
+                          return parts.length > 0 ? parts.join(' | ') : JSON.stringify(time);
+                        })() : JSON.stringify(time));
+
+                        return (
+                          <div key={platform} className="rounded-md bg-muted p-2.5 flex items-start gap-2">
+                            <div className="flex items-center gap-1.5 min-w-[90px]">
+                              {PIcon && <PIcon className="w-3 h-3" />}
+                              <span className="text-sm font-medium capitalize">{platform}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">{timeData}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {aiResult.research.youtubeShorts && Array.isArray(aiResult.research.youtubeShorts) && aiResult.research.youtubeShorts.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium flex items-center gap-1.5">
+                      <SiYoutube className="h-3.5 w-3.5 text-red-600" />
+                      Relevant YouTube Shorts
+                    </h4>
+                    <div className="space-y-1.5">
+                      {aiResult.research.youtubeShorts.map((short: any, i: number) => {
+                        const shortUrl = typeof short === 'string' ? short : short.url;
+                        const shortTitle = typeof short === 'string' ? short : (short.title || short.url);
+                        return (
+                          <div key={i} className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <a
+                                href={shortUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-medium text-primary underline underline-offset-2 break-all"
+                              >
+                                {shortTitle}
+                              </a>
+                              {short.relevance && (
+                                <p className="text-xs text-muted-foreground mt-0.5">{short.relevance}</p>
+                              )}
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const linkText = `\n\nCheck out: ${shortTitle} - ${shortUrl}`;
+                                if (content && !content.includes(shortUrl)) {
+                                  setContent((prev) => prev + linkText);
+                                } else if (!content) {
+                                  setContent(`Check out: ${shortTitle} - ${shortUrl}`);
+                                }
+                                toast({ title: 'Link added', description: 'YouTube Short link added to your post content.' });
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add to Post
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {typeof aiResult.research === 'string' ? aiResult.research : JSON.stringify(aiResult.research, null, 2)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {(aiResult?.designSuggestions && !designResult) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Palette className="h-4 w-4" />
+              Design Suggestions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {typeof aiResult.designSuggestions === 'object' && !Array.isArray(aiResult.designSuggestions) ? (
+              <div className="space-y-3">
+                {(aiResult.designSuggestions.style || aiResult.designSuggestions.mood || aiResult.designSuggestions.aspect_ratio) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {aiResult.designSuggestions.style && <Badge variant="outline">{aiResult.designSuggestions.style}</Badge>}
+                    {aiResult.designSuggestions.mood && <Badge variant="secondary">{aiResult.designSuggestions.mood}</Badge>}
+                    {aiResult.designSuggestions.aspect_ratio && <Badge variant="outline">{aiResult.designSuggestions.aspect_ratio}</Badge>}
+                  </div>
+                )}
+                {aiResult.designSuggestions.image_prompt && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">AI Image Brief</h4>
+                    <div className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                      <p className="text-sm flex-1">{aiResult.designSuggestions.image_prompt}</p>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleGenerateImage(aiResult.designSuggestions.image_prompt)}
+                        disabled={isGeneratingImage}
+                      >
+                        {isGeneratingImage ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                        Generate
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {aiResult.designSuggestions.visualSuggestions && Array.isArray(aiResult.designSuggestions.visualSuggestions) && aiResult.designSuggestions.visualSuggestions.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Visual Ideas</h4>
+                    {aiResult.designSuggestions.visualSuggestions.map((s: any, i: number) => {
+                      const desc = typeof s === 'object' ? (s.description || JSON.stringify(s)) : String(s);
+                      const isVideo = desc.startsWith('[VIDEO]');
+                      return (
+                        <div key={i} className="rounded-md bg-muted p-2.5 flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <Badge variant="outline" className="text-xs mb-1 capitalize">
+                              {isVideo ? <Video className="h-3 w-3 mr-1" /> : <ImageIcon className="h-3 w-3 mr-1" />}
+                              {isVideo ? 'Video' : 'Image'}
+                            </Badge>
+                            <p className="text-sm">{isVideo ? desc.replace('[VIDEO]', '').trim() : desc}</p>
+                          </div>
+                          {!isVideo && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleGenerateImage(desc)}
+                              disabled={isGeneratingImage}
+                            >
+                              {isGeneratingImage ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Wand2 className="h-3 w-3 mr-1" />}
+                              Generate
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {typeof aiResult.designSuggestions === 'string' ? aiResult.designSuggestions : JSON.stringify(aiResult.designSuggestions, null, 2)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {aiResult?.review && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              Post Review
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {typeof aiResult.review === 'object' && !Array.isArray(aiResult.review) ? (
+              <div className="space-y-3">
+                {aiResult.review.score !== undefined && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Quality Score:</span>
+                    <Badge variant={aiResult.review.score >= 80 ? 'default' : aiResult.review.score >= 60 ? 'secondary' : 'outline'}>
+                      {aiResult.review.score}/100
+                    </Badge>
+                  </div>
+                )}
+                {aiResult.review.feedback && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Feedback</h4>
+                    <p className="text-sm text-muted-foreground">{typeof aiResult.review.feedback === 'string' ? aiResult.review.feedback : JSON.stringify(aiResult.review.feedback)}</p>
+                  </div>
+                )}
+                {aiResult.review.improvements && Array.isArray(aiResult.review.improvements) && aiResult.review.improvements.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-1">Suggested Improvements</h4>
+                    <ul className="space-y-1 text-sm text-muted-foreground list-disc list-inside">
+                      {aiResult.review.improvements.map((imp: any, i: number) => (
+                        <li key={i}>{typeof imp === 'string' ? imp : JSON.stringify(imp)}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                {typeof aiResult.review === 'string' ? aiResult.review : JSON.stringify(aiResult.review, null, 2)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {mode !== 'autonomous' && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PenLine className="h-5 w-5" />
+              {mode === 'manual' ? 'Compose Post' : 'Edit & Finalize'}
+            </CardTitle>
+            <CardDescription>
+              {mode === 'manual' ? 'Write your post content' : 'Review and edit the AI-generated content before posting'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <Textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Write your post content here..."
+                className="min-h-[120px]"
+              />
+            </div>
+
+            {mode === 'manual' && <PlatformSelector />}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Schedule (optional)</Label>
+                <Input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hashtags (comma separated)</Label>
+                <Input
+                  value={hashtags}
+                  onChange={(e) => setHashtags(e.target.value)}
+                  placeholder="marketing, ai, social"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3 border-t pt-4">
+              <Label className="text-sm font-medium">Media Attachments</Label>
+              {mediaUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {mediaUrls.map((url, i) => (
+                    <div key={i} className="relative group">
+                      {url.match(/\.(mp4|mov|webm|avi)$/i) ? (
+                        <video src={url} className="h-20 w-20 rounded-md object-cover border" />
+                      ) : (
+                        <img src={url} alt={`Media ${i + 1}`} className="h-20 w-20 rounded-md object-cover border" />
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ visibility: 'visible' }}
+                        onClick={() => setMediaUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => document.getElementById('portal-media-upload')?.click()} disabled={isUploadingFiles}>
+                  {isUploadingFiles ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+                  Upload Files
+                </Button>
+                <input id="portal-media-upload" type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleFileUpload} />
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Paste image or video URL..."
+                  value={mediaUrlInput}
+                  onChange={(e) => setMediaUrlInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddMediaUrl()}
+                />
+                <Button variant="outline" size="sm" onClick={handleAddMediaUrl} disabled={!mediaUrlInput.trim() || isAddingUrl}>
+                  {isAddingUrl ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Link className="h-3 w-3 mr-1" />}
+                  Add
+                </Button>
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" />
+                  Video Generator
+                </Label>
+                <p className="text-xs text-muted-foreground">Get a stock video from Pexels or generate one with AI.</p>
+                <div className="flex items-center gap-2 mb-2">
+                  <Select value={videoSource} onValueChange={(v: any) => setVideoSource(v)}>
+                    <SelectTrigger className="w-[160px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="stock">Stock (Pexels)</SelectItem>
+                      <SelectItem value="ai">AI Generated</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-muted-foreground">
+                    {videoSource === 'stock' ? 'Quick, professional footage' : 'Custom, slower to generate'}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Describe the video you want (or leave blank to use briefing)..."
+                    value={videoPrompt}
+                    onChange={(e) => setVideoPrompt(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleGenerateVideo()}
+                  />
+                  <Button variant="outline" size="sm" onClick={handleGenerateVideo} disabled={isGeneratingVideo}>
+                    {isGeneratingVideo ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Sparkles className="h-3 w-3 mr-1" />}
+                    {isGeneratingVideo ? 'Getting...' : videoSource === 'stock' ? 'Find Video' : 'Generate'}
+                  </Button>
+                </div>
+                {isGeneratingVideo && (
+                  <p className="text-xs text-muted-foreground animate-pulse">
+                    {videoSource === 'stock'
+                      ? 'Searching Pexels for matching video...'
+                      : 'Creating AI scenes and composing video... This may take 1-2 minutes.'}
+                  </p>
+                )}
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <SiYoutube className="h-3 w-3 text-red-600" />
+                  YouTube Shorts
+                </Label>
+                <p className="text-xs text-muted-foreground">The Research agent will search YouTube for relevant Shorts and include their links in your generated content.</p>
+              </div>
+
+              <div className="border-t pt-3 space-y-2">
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <Search className="h-3 w-3" />
+                  URL Scraper
+                </Label>
+                <p className="text-xs text-muted-foreground">Scrape a webpage to extract content, images, and details for your post. Images are automatically attached.</p>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.com/listing..."
+                    value={scrapeUrlInput}
+                    onChange={(e) => setScrapeUrlInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleScrapeUrl()}
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleScrapeUrl}
+                    disabled={!scrapeUrlInput.trim() || isScraping}
+                  >
+                    {isScraping ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Search className="h-3 w-3 mr-1" />}
+                    {isScraping ? 'Scraping...' : 'Scrape'}
+                  </Button>
+                </div>
+                {scrapedData && (
+                  <div className="rounded-md bg-muted p-3 space-y-2">
+                    {scrapedData.title && <p className="text-sm font-medium">{scrapedData.title}</p>}
+                    {scrapedData.description && <p className="text-xs text-muted-foreground">{scrapedData.description}</p>}
+                    {scrapedData.price && <Badge variant="secondary">{scrapedData.price}</Badge>}
+                    {scrapedData.address && <p className="text-xs text-muted-foreground">{scrapedData.address}</p>}
+                    <p className="text-xs text-muted-foreground">{scrapedData.images?.length || 0} images attached</p>
+                    <p className="text-xs text-muted-foreground">Tip: Use <span className="font-mono text-[11px] bg-background px-1 rounded">(scrape {scrapeUrlInput})</span> in your briefing for AI to incorporate this content automatically.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 pt-2 border-t">
+              <div className="flex items-center gap-2 flex-1 min-w-[180px]">
+                <Input
+                  value={vibeDirection}
+                  onChange={(e) => setVibeDirection(e.target.value)}
+                  placeholder="e.g., Make it more casual..."
+                  className="flex-1"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => vibeEditMutation.mutate()}
+                  disabled={!vibeDirection.trim() || !content.trim() || vibeEditMutation.isPending}
+                >
+                  {vibeEditMutation.isPending ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              <Button
+                variant="outline"
+                onClick={() => reviewMutation.mutate()}
+                disabled={!content.trim() || selectedPlatforms.length === 0 || reviewMutation.isPending}
+              >
+                {reviewMutation.isPending ? (
+                  <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Reviewing...</>
+                ) : (
+                  <><BarChart3 className="h-4 w-4 mr-2" />Review Post</>
+                )}
+              </Button>
+            </div>
+
+            {reviewResult && (
+              <div className="p-4 rounded-md border space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 5 }, (_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${i < Math.round((reviewResult.score ?? 0) / 20) ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground/30'}`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-sm font-medium">{reviewResult.score ?? 'N/A'}/100</span>
+                  </div>
+                  {reviewResult.approved_for_publish !== undefined && (
+                    <Badge variant={reviewResult.approved_for_publish ? 'default' : 'destructive'}>
+                      {reviewResult.approved_for_publish ? 'Approved' : 'Needs Revision'}
+                    </Badge>
+                  )}
+                </div>
+
+                {reviewResult.reviews && Object.keys(reviewResult.reviews).length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Per-Platform Scores</h4>
+                    {Object.entries(reviewResult.reviews).map(([platform, review]: [string, any]) => {
+                      const pl = PLATFORMS.find((p) => p.id === platform);
+                      const Icon = pl?.icon;
+                      return (
+                        <div key={platform} className="rounded-md bg-muted p-2.5 space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            {Icon && <Icon className="h-3 w-3" />}
+                            <span className="text-sm font-medium capitalize">{pl?.label || platform}</span>
+                            <span className="text-sm text-muted-foreground ml-auto">{review.overall}/100</span>
+                          </div>
+                          {review.scores && (
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(review.scores).map(([dim, score]: [string, any]) => (
+                                <Badge key={dim} variant={Number(score) >= 70 ? 'outline' : 'destructive'} className="text-xs capitalize">
+                                  {dim}: {score}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                          {review.issues && Array.isArray(review.issues) && review.issues.length > 0 && (
+                            <ul className="list-disc list-inside text-xs text-muted-foreground mt-1">
+                              {review.issues.map((issue: string, j: number) => (
+                                <li key={j}>{issue}</li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {!reviewResult.reviews && reviewResult.suggestions && (
+                  <ul className="list-disc list-inside text-sm space-y-1">
+                    {(Array.isArray(reviewResult.suggestions) ? reviewResult.suggestions : [reviewResult.suggestions]).map((s: string, i: number) => (
+                      <li key={i} className="text-muted-foreground">{s}</li>
+                    ))}
+                  </ul>
+                )}
+                {!reviewResult.reviews && reviewResult.feedback && (
+                  <p className="text-sm text-muted-foreground">{reviewResult.feedback}</p>
+                )}
+
+                {reviewResult.revisedContent && reviewResult.revisedContent !== content && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <h4 className="text-sm font-medium">Improved Version</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setContent(reviewResult.revisedContent);
+                          toast({ title: 'Applied', description: 'Revised content loaded into editor.' });
+                        }}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Use This
+                      </Button>
+                    </div>
+                    <div className="rounded-md bg-muted p-3">
+                      <p className="text-sm whitespace-pre-wrap">{reviewResult.revisedContent}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <Button
+              onClick={() => createPostMutation.mutate()}
+              disabled={!content.trim() || selectedPlatforms.length === 0 || createPostMutation.isPending}
+              className="w-full"
+            >
+              {createPostMutation.isPending ? (
+                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Saving...</>
+              ) : (
+                <><Send className="h-4 w-4 mr-2" />Save Post</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+function PostsTab() {
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [editingPost, setEditingPost] = useState<any>(null);
+  const [editContent, setEditContent] = useState('');
+  const [editScheduledAt, setEditScheduledAt] = useState('');
+  const [editHashtags, setEditHashtags] = useState('');
+  const [additionalDates, setAdditionalDates] = useState<string[]>([]);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [newContent, setNewContent] = useState('');
+  const [newPlatforms, setNewPlatforms] = useState<string[]>([]);
+  const [newAccountIds, setNewAccountIds] = useState<string[]>([]);
+  const [newScheduledAt, setNewScheduledAt] = useState('');
+  const [newHashtags, setNewHashtags] = useState('');
+  const [newCampaignId, setNewCampaignId] = useState('');
+  const [newMediaUrls, setNewMediaUrls] = useState<string[]>([]);
+  const [newMediaUrlInput, setNewMediaUrlInput] = useState('');
+  const [isUploadingNewFiles, setIsUploadingNewFiles] = useState(false);
+  const [isAddingNewUrl, setIsAddingNewUrl] = useState(false);
+  const { toast } = useToast();
+
+  const { data: postsData, isLoading } = useQuery<any>({
+    queryKey: ['/api/portal/social/posts'],
+  });
+
+  const { data: accountsData } = useQuery<any>({
+    queryKey: ['/api/portal/social/accounts'],
+  });
+  const accounts = Array.isArray(accountsData) ? accountsData : accountsData?.accounts || [];
+
+  const { data: campaignsData } = useQuery<any>({
+    queryKey: ['/api/portal/social/campaigns'],
+  });
+  const campaigns = Array.isArray(campaignsData) ? campaignsData : campaignsData?.campaigns || [];
+
+  const posts = postsData?.posts || postsData || [];
+  const filteredPosts = Array.isArray(posts)
+    ? statusFilter === 'all'
+      ? posts
+      : posts.filter((p: any) => p.status === statusFilter)
+    : [];
+
+  const createPostMutation = useMutation({
+    mutationFn: async () => {
+      const payload: any = {
+        content: newContent,
+        platforms: newPlatforms,
+        hashtags: newHashtags ? newHashtags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+        mediaUrls: newMediaUrls,
+        status: newScheduledAt ? 'scheduled' : 'draft',
+      };
+      if (newScheduledAt) payload.scheduledAt = new Date(newScheduledAt).toISOString();
+      if (newCampaignId) payload.campaignId = newCampaignId;
+      if (newAccountIds.length > 0) payload.accountIds = newAccountIds;
+      const res = await apiRequest('POST', '/api/portal/social/posts', payload);
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Post created', description: 'Your post has been saved.' });
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+      setIsCreateOpen(false);
+      setNewContent('');
+      setNewPlatforms([]);
+      setNewAccountIds([]);
+      setNewScheduledAt('');
+      setNewHashtags('');
+      setNewCampaignId('');
+      setNewMediaUrls([]);
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Failed to create post', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleNewFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    setIsUploadingNewFiles(true);
+    try {
+      const formData = new FormData();
+      Array.from(files).forEach((f) => formData.append('files', f));
+      const res = await fetch('/api/portal/social/media/upload', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.urls) setNewMediaUrls((prev) => [...prev, ...data.urls]);
+      else if (data.url) setNewMediaUrls((prev) => [...prev, data.url]);
+    } catch (err: any) {
+      toast({ title: 'Upload failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsUploadingNewFiles(false);
+    }
+  };
+
+  const handleAddNewMediaUrl = async () => {
+    if (!newMediaUrlInput.trim()) return;
+    setIsAddingNewUrl(true);
+    try {
+      const res = await apiRequest('POST', '/api/portal/social/media/from-url', { url: newMediaUrlInput.trim() });
+      const data = await res.json();
+      if (data.url) setNewMediaUrls((prev) => [...prev, data.url]);
+      setNewMediaUrlInput('');
+    } catch (err: any) {
+      toast({ title: 'Failed to add URL', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsAddingNewUrl(false);
+    }
+  };
+
+  const openEditDialog = (post: any) => {
+    setEditingPost(post);
+    setEditContent(post.content || '');
+    setEditScheduledAt(post.scheduledAt ? new Date(post.scheduledAt).toISOString().slice(0, 16) : '');
+    setEditHashtags((post.hashtags || []).join(', '));
+  };
+
+  const closeEditDialog = () => {
+    setEditingPost(null);
+    setEditContent('');
+    setEditScheduledAt('');
+    setEditHashtags('');
+    setAdditionalDates([]);
+  };
+
+  const buildPayload = (overrides: any = {}) => ({
+    content: editContent,
+    hashtags: editHashtags ? editHashtags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+    ...overrides,
+  });
+
+  const updatePostMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await apiRequest('PUT', `/api/portal/social/posts/${editingPost.id}`, payload);
+      return res.json();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Update failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const publishNowMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      const res = await apiRequest('POST', `/api/portal/social/posts/${postId}/publish`, {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data.post?.status === 'failed') {
+        const errorMsg = data.errors?.join('; ') || 'Publishing failed. Make sure you have a connected account with proper permissions.';
+        toast({ title: 'Publishing issue', description: errorMsg, variant: 'destructive' });
+      } else {
+        toast({ title: 'Post published!', description: 'Your post has been published to your connected accounts.' });
+      }
+      closeEditDialog();
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Publish failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deletePostMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      await apiRequest('DELETE', `/api/portal/social/posts/${postId}`);
+    },
+    onSuccess: () => {
+      toast({ title: 'Post deleted', description: 'The post has been removed.' });
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Delete failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleSaveDraft = async () => {
+    try {
+      await updatePostMutation.mutateAsync(buildPayload({ status: 'draft' }));
+      toast({ title: 'Draft saved', description: 'Your post has been saved as a draft.' });
+      closeEditDialog();
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    } catch {}
+  };
+
+  const handleSchedule = async () => {
+    if (!editScheduledAt) {
+      toast({ title: 'Schedule required', description: 'Please set a date and time to schedule this post.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await updatePostMutation.mutateAsync(buildPayload({ scheduledAt: new Date(editScheduledAt).toISOString(), status: 'scheduled' }));
+      toast({ title: 'Post scheduled', description: 'Your post has been scheduled.' });
+      closeEditDialog();
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    } catch {}
+  };
+
+  const handlePostNow = async () => {
+    try {
+      await updatePostMutation.mutateAsync(buildPayload({ status: 'draft', scheduledAt: null }));
+      publishNowMutation.mutate(editingPost.id);
+    } catch {}
+  };
+
+  const repostMutation = useMutation({
+    mutationFn: async (post: any) => {
+      const res = await apiRequest('POST', '/api/portal/social/posts', {
+        content: post.content,
+        platforms: post.platforms,
+        hashtags: post.hashtags,
+        mediaUrls: post.mediaUrls,
+        status: 'draft',
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Post duplicated', description: 'A new draft has been created.' });
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Re-post failed', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const handleScheduleMultiple = async () => {
+    if (!editScheduledAt) {
+      toast({ title: 'Schedule required', description: 'Please set a date and time for the first posting.', variant: 'destructive' });
+      return;
+    }
+    const allDates = [editScheduledAt, ...additionalDates.filter(Boolean)];
+    try {
+      await updatePostMutation.mutateAsync(buildPayload({ scheduledAt: new Date(allDates[0]).toISOString(), status: 'scheduled' }));
+      for (const date of allDates.slice(1)) {
+        await apiRequest('POST', '/api/portal/social/posts', {
+          content: editContent,
+          platforms: editingPost.platforms,
+          hashtags: editHashtags ? editHashtags.split(',').map((t: string) => t.trim()).filter(Boolean) : [],
+          mediaUrls: editingPost.mediaUrls,
+          scheduledAt: new Date(date).toISOString(),
+          status: 'scheduled',
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/posts'] });
+      toast({ title: `${allDates.length} post${allDates.length > 1 ? 's' : ''} scheduled`, description: allDates.length > 1 ? 'Your post will go out on multiple days.' : 'Your post has been scheduled.' });
+      closeEditDialog();
+    } catch {}
+  };
+
+  const isBusy = updatePostMutation.isPending || publishNowMutation.isPending || repostMutation.isPending;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <h2 className="text-xl font-semibold">Posts</h2>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder="Filter by status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Posts</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="scheduled">Scheduled</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
+            </SelectContent>
+          </Select>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Post
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[550px] max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Create New Post</DialogTitle>
+                <DialogDescription>Compose a new social media post</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    placeholder="What do you want to share?"
+                    className="min-h-[120px]"
+                    value={newContent}
+                    onChange={(e) => setNewContent(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Platforms</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {PLATFORMS.map((platform) => {
+                      const Icon = platform.icon;
+                      return (
+                        <div key={platform.id} className="flex items-center gap-2">
+                          <Checkbox
+                            checked={newPlatforms.includes(platform.id)}
+                            onCheckedChange={(checked) => {
+                              setNewPlatforms((prev) =>
+                                checked
+                                  ? [...prev, platform.id]
+                                  : prev.filter((p) => p !== platform.id)
+                              );
+                            }}
+                          />
+                          <Label className="flex items-center gap-1 cursor-pointer">
+                            <Icon className="w-3 h-3" />
+                            {platform.label}
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                {newPlatforms.length > 0 && accounts.filter((a: any) => newPlatforms.includes(a.platform) && a.isConnected).length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Publish to Accounts</Label>
+                    <p className="text-xs text-muted-foreground">Select which connected accounts to publish to.</p>
+                    <div className="flex flex-col gap-2">
+                      {accounts
+                        .filter((a: any) => newPlatforms.includes(a.platform) && a.isConnected)
+                        .map((account: any) => {
+                          const platform = PLATFORMS.find((p) => p.id === account.platform);
+                          const PIcon = platform?.icon;
+                          return (
+                            <div key={account.id} className="flex items-center gap-2">
+                              <Checkbox
+                                checked={newAccountIds.includes(account.id)}
+                                onCheckedChange={(checked) => {
+                                  setNewAccountIds((prev) =>
+                                    checked
+                                      ? [...prev, account.id]
+                                      : prev.filter((id) => id !== account.id)
+                                  );
+                                }}
+                              />
+                              <Label className="flex items-center gap-1 cursor-pointer">
+                                {PIcon && <PIcon className="w-3 h-3" />}
+                                {account.accountName || account.name}
+                                {account.accountUsername && <span className="text-muted-foreground text-xs">(@{account.accountUsername})</span>}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Media Attachments</Label>
+                  {newMediaUrls.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {newMediaUrls.map((url, i) => (
+                        <div key={i} className="relative group">
+                          {url.match(/\.(mp4|mov|webm|avi)$/i) ? (
+                            <video src={url} className="h-16 w-16 rounded-md object-cover border" />
+                          ) : (
+                            <img src={url} alt={`Media ${i + 1}`} className="h-16 w-16 rounded-md object-cover border" />
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{ visibility: 'visible' }}
+                            onClick={() => setNewMediaUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => document.getElementById('portal-create-media-upload')?.click()} disabled={isUploadingNewFiles}>
+                      {isUploadingNewFiles ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Upload className="h-3 w-3 mr-1" />}
+                      Upload Files
+                    </Button>
+                    <input id="portal-create-media-upload" type="file" accept="image/*,video/*" multiple className="hidden" onChange={handleNewFileUpload} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Paste image or video URL..."
+                      value={newMediaUrlInput}
+                      onChange={(e) => setNewMediaUrlInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleAddNewMediaUrl()}
+                    />
+                    <Button variant="outline" size="sm" onClick={handleAddNewMediaUrl} disabled={!newMediaUrlInput.trim() || isAddingNewUrl}>
+                      {isAddingNewUrl ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Link className="h-3 w-3 mr-1" />}
+                      Add
+                    </Button>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Schedule (optional)</Label>
+                  <Input type="datetime-local" value={newScheduledAt} onChange={(e) => setNewScheduledAt(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hashtags (comma-separated)</Label>
+                  <Input placeholder="#ai, #socialmedia, #marketing" value={newHashtags} onChange={(e) => setNewHashtags(e.target.value)} />
+                </div>
+                {campaigns.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Campaign (optional)</Label>
+                    <Select value={newCampaignId} onValueChange={setNewCampaignId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a campaign" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {campaigns.map((c: any) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <DialogFooter className="gap-2">
+                  <Button onClick={() => createPostMutation.mutate()} disabled={!newContent.trim() || newPlatforms.length === 0 || createPostMutation.isPending}>
+                    {createPostMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Create Post
+                  </Button>
+                </DialogFooter>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      ) : filteredPosts.length ? (
+        <div className="space-y-4">
+          {filteredPosts.map((post: any) => (
+            <Card key={post.id}>
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {post.platforms &&
+                      (Array.isArray(post.platforms) ? post.platforms : []).map((p: string) => {
+                        const platform = PLATFORMS.find((pl) => pl.id === p);
+                        if (!platform) return null;
+                        const Icon = platform.icon;
+                        return (
+                          <Badge key={p} variant="outline">
+                            <Icon className="h-3 w-3 mr-1" />
+                            {platform.label}
+                          </Badge>
+                        );
+                      })}
+                    <Badge variant={STATUS_VARIANTS[post.status] || 'outline'}>
+                      {getStatusLabel(post.status || 'draft')}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {post.status !== 'published' && (
+                      <>
+                        <Button size="icon" variant="ghost" onClick={() => openEditDialog(post)} title="Edit post">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => publishNowMutation.mutate(post.id)}
+                          disabled={publishNowMutation.isPending}
+                          title="Publish now"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    <Button size="icon" variant="ghost" onClick={() => repostMutation.mutate(post)} disabled={repostMutation.isPending} title="Duplicate as new draft">
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button size="icon" variant="ghost" onClick={() => deletePostMutation.mutate(post.id)} disabled={deletePostMutation.isPending} title="Delete post">
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                {post.scheduledAt && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(post.scheduledAt).toLocaleDateString()}
+                  </span>
+                )}
+                <SocialPostPreview
+                  content={post.content}
+                  hashtags={post.hashtags}
+                  mediaUrls={post.mediaUrls}
+                  platform={post.platforms?.[0] || 'facebook'}
+                  accountName={(() => {
+                    const firstId = post.accountIds?.[0];
+                    const acc = firstId ? accounts.find((a: any) => a.id === firstId) : accounts.find((a: any) => post.platforms?.[0] && a.platform === post.platforms[0]);
+                    return acc?.accountName || acc?.name || 'Your Page';
+                  })()}
+                  accountImage={(() => {
+                    const firstId = post.accountIds?.[0];
+                    const acc = firstId ? accounts.find((a: any) => a.id === firstId) : accounts.find((a: any) => post.platforms?.[0] && a.platform === post.platforms[0]);
+                    return acc?.accountImage || undefined;
+                  })()}
+                />
+                {post.engagement && (
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    {post.engagement.likes !== undefined && <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {post.engagement.likes}</span>}
+                    {post.engagement.shares !== undefined && <span className="flex items-center gap-1"><Share2 className="h-3 w-3" /> {post.engagement.shares}</span>}
+                    {post.engagement.comments !== undefined && <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {post.engagement.comments}</span>}
+                    {post.engagement.reach !== undefined && <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {post.engagement.reach}</span>}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="py-8">
+            <p className="text-muted-foreground text-center">
+              {statusFilter === 'all' ? 'No posts yet. Create your first post to get started.' : `No ${statusFilter} posts found.`}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Post</DialogTitle>
+            <DialogDescription>Update content, schedule, or publish immediately</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <Textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="min-h-[140px]"
+                placeholder="Write your post content..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Hashtags (comma-separated)</Label>
+              <Input
+                value={editHashtags}
+                onChange={(e) => setEditHashtags(e.target.value)}
+                placeholder="#realestate, #pittsburgh"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1">
+                <Clock className="h-3 w-3" /> Schedule Date & Time
+              </Label>
+              <Input
+                type="datetime-local"
+                value={editScheduledAt}
+                onChange={(e) => setEditScheduledAt(e.target.value)}
+              />
+              {additionalDates.map((date, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    type="datetime-local"
+                    value={date}
+                    onChange={(e) => {
+                      const updated = [...additionalDates];
+                      updated[idx] = e.target.value;
+                      setAdditionalDates(updated);
+                    }}
+                    className="flex-1"
+                  />
+                  <Button size="icon" variant="ghost" onClick={() => setAdditionalDates((prev) => prev.filter((_, i) => i !== idx))}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" size="sm" onClick={() => setAdditionalDates((prev) => [...prev, ''])} className="w-full">
+                <CalendarPlus className="h-3 w-3 mr-2" />
+                Add another day
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                {additionalDates.length > 0
+                  ? `Will create ${1 + additionalDates.length} separate scheduled posts`
+                  : 'Required when using "Schedule" below. Add more dates to post on multiple days.'}
+              </p>
+            </div>
+            {editingPost?.platforms?.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {(editingPost.platforms || []).map((p: string) => {
+                  const platform = PLATFORMS.find((pl) => pl.id === p);
+                  if (!platform) return null;
+                  const Icon = platform.icon;
+                  return (
+                    <Badge key={p} variant="outline">
+                      <Icon className="h-3 w-3 mr-1" />
+                      {platform.label}
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex flex-wrap gap-2 justify-end">
+            <Button variant="outline" onClick={closeEditDialog} disabled={isBusy}>
+              Cancel
+            </Button>
+            <Button variant="secondary" onClick={handleSaveDraft} disabled={isBusy}>
+              {updatePostMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Save Draft
+            </Button>
+            <Button variant="outline" onClick={handleScheduleMultiple} disabled={isBusy}>
+              <Clock className="h-4 w-4 mr-2" />
+              {additionalDates.length > 0 ? `Schedule All (${1 + additionalDates.length})` : 'Schedule'}
+            </Button>
+            <Button onClick={handlePostNow} disabled={isBusy}>
+              {publishNowMutation.isPending
+                ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                : <Send className="h-4 w-4 mr-2" />}
+              Post Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function CampaignsTab() {
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<any>(null);
+  const { toast } = useToast();
+
+  const { data: campaignsData, isLoading } = useQuery<any>({
+    queryKey: ['/api/portal/social/campaigns'],
+  });
+  const { data: postsData } = useQuery<any>({
+    queryKey: ['/api/portal/social/posts'],
+  });
+
+  const campaigns = campaignsData?.campaigns || campaignsData || [];
+  const posts = postsData?.posts || postsData || [];
+
+  const campaignPosts = selectedCampaign
+    ? (Array.isArray(posts) ? posts : []).filter((p: any) => p.campaignId === selectedCampaign.id)
+    : [];
+
+  const createCampaignMutation = useMutation({
+    mutationFn: (data: CreateCampaignForm) => {
+      const payload: any = {
+        name: data.name,
+        description: data.description || undefined,
+        status: data.status,
+        startDate: data.startDate || undefined,
+        endDate: data.endDate || undefined,
+        targetAudience: data.targetAudience || undefined,
+        goals: data.goals || undefined,
+      };
+      if (editingCampaign) {
+        return apiRequest('PUT', `/api/portal/social/campaigns/${editingCampaign.id}`, payload);
+      }
+      return apiRequest('POST', '/api/portal/social/campaigns', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/campaigns'] });
+      setIsCreateOpen(false);
+      setEditingCampaign(null);
+      form.reset();
+      toast({ title: editingCampaign ? 'Campaign updated' : 'Campaign created', description: 'Your campaign has been saved.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to save campaign', variant: 'destructive' });
+    },
+  });
+
+  const deleteCampaignMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/portal/social/campaigns/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/campaigns'] });
+      setSelectedCampaign(null);
+      toast({ title: 'Campaign deleted' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to delete campaign', variant: 'destructive' });
+    },
+  });
+
+  const form = useForm<CreateCampaignForm>({
+    resolver: zodResolver(createCampaignSchema),
+    defaultValues: { name: '', description: '', status: 'draft', startDate: '', endDate: '', targetAudience: '', goals: '' },
+  });
+
+  const handleEdit = (campaign: any) => {
+    setEditingCampaign(campaign);
+    form.reset({
+      name: campaign.name || '',
+      description: campaign.description || '',
+      status: campaign.status || 'draft',
+      startDate: campaign.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : '',
+      endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().split('T')[0] : '',
+      targetAudience: campaign.targetAudience || '',
+      goals: typeof campaign.goals === 'string' ? campaign.goals : JSON.stringify(campaign.goals || ''),
+    });
+    setIsCreateOpen(true);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setIsCreateOpen(open);
+    if (!open) {
+      setEditingCampaign(null);
+      form.reset();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold">Campaigns</h2>
+          <p className="text-muted-foreground text-sm">Organize your posts into campaigns</p>
+        </div>
+        <Dialog open={isCreateOpen} onOpenChange={handleDialogChange}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Campaign
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingCampaign ? 'Edit Campaign' : 'Create Campaign'}</DialogTitle>
+              <DialogDescription>Start a new social media campaign</DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => createCampaignMutation.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Campaign name" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Description</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Campaign description" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="paused">Paused</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="startDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Start Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="endDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>End Date</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="targetAudience"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Target Audience</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Small business owners" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="goals"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Goals</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Campaign goals and KPIs" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter className="gap-2">
+                  <Button type="submit" disabled={createCampaignMutation.isPending}>
+                    {createCampaignMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {editingCampaign ? 'Update Campaign' : 'Create Campaign'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : Array.isArray(campaigns) && campaigns.length ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {campaigns.map((campaign: any) => {
+            const statusCfg = campaignStatusConfig[campaign.status] || campaignStatusConfig.draft;
+            const postCount = (Array.isArray(posts) ? posts : []).filter((p: any) => p.campaignId === campaign.id).length;
+            return (
+              <Card
+                key={campaign.id}
+                className={`cursor-pointer hover-elevate ${selectedCampaign?.id === campaign.id ? 'ring-2 ring-ring' : ''}`}
+                onClick={() => setSelectedCampaign(selectedCampaign?.id === campaign.id ? null : campaign)}
+              >
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-base">{campaign.name}</CardTitle>
+                    <Badge variant={statusCfg.variant}>{statusCfg.label}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {campaign.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">{campaign.description}</p>
+                  )}
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    {formatDate(campaign.startDate)} - {formatDate(campaign.endDate)}
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">{postCount} post{postCount !== 1 ? 's' : ''}</span>
+                    <div className="flex items-center gap-1">
+                      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); handleEdit(campaign); }}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); deleteCampaignMutation.mutate(campaign.id); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Megaphone className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-1">No campaigns yet</h3>
+            <p className="text-muted-foreground text-sm">Create a campaign to organize your social media posts.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={!!selectedCampaign} onOpenChange={(open) => !open && setSelectedCampaign(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedCampaign?.name}</DialogTitle>
+            <DialogDescription>
+              {formatDate(selectedCampaign?.startDate)} - {formatDate(selectedCampaign?.endDate)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {selectedCampaign?.goals && (
+              <div>
+                <Label className="text-muted-foreground">Goals</Label>
+                <p className="text-sm mt-1">
+                  {typeof selectedCampaign.goals === 'string' ? selectedCampaign.goals : JSON.stringify(selectedCampaign.goals)}
+                </p>
+              </div>
+            )}
+            <div>
+              <Label className="text-muted-foreground">Campaign Posts ({campaignPosts.length})</Label>
+              {campaignPosts.length ? (
+                <div className="space-y-3 mt-2">
+                  {campaignPosts.map((post: any) => (
+                    <div key={post.id} className="p-3 rounded-md border">
+                      <p className="text-sm">{post.content?.substring(0, 120)}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant={STATUS_VARIANTS[post.status] || 'outline'}>
+                          {getStatusLabel(post.status || 'draft')}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">{formatDate(post.scheduledAt || post.createdAt)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground mt-2">No posts in this campaign yet.</p>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function AccountsTab() {
+  const { toast } = useToast();
+  const [isManualOpen, setIsManualOpen] = useState(false);
+
+  const { data: accountsData, isLoading } = useQuery<any>({
+    queryKey: ['/api/portal/social/accounts'],
+  });
+  const accounts = accountsData?.accounts || accountsData || [];
+
+  const [connecting, setConnecting] = useState(false);
+
+  const disconnectMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/portal/social/accounts/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/accounts'] });
+      toast({ title: 'Account disconnected', description: 'The account has been removed from your portal.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to disconnect account', variant: 'destructive' });
+    },
+  });
+
+  const createAccountMutation = useMutation({
+    mutationFn: (data: CreateAccountForm) =>
+      apiRequest('POST', '/api/portal/social/accounts', {
+        platform: data.platform,
+        accountName: data.accountName,
+        accountUsername: data.username,
+        isConnected: false,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/accounts'] });
+      setIsManualOpen(false);
+      accountForm.reset();
+      toast({ title: 'Account added', description: 'Your account has been added manually.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to add account', variant: 'destructive' });
+    },
+  });
+
+  const accountForm = useForm<CreateAccountForm>({
+    resolver: zodResolver(createAccountSchema),
+    defaultValues: { platform: '', accountName: '', username: '' },
+  });
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    try {
+      const res = await apiRequest('GET', '/api/portal/social/meta/connect');
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error('No OAuth URL returned');
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to start connection', variant: 'destructive' });
+      setConnecting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="text-xl font-bold">Connected Accounts</h2>
+          <p className="text-sm text-muted-foreground">Link your social media accounts to publish directly from the portal</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button onClick={handleConnect} disabled={connecting}>
+            {connecting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Link className="h-4 w-4 mr-2" />}
+            Connect Facebook / Instagram
+          </Button>
+          <Dialog open={isManualOpen} onOpenChange={setIsManualOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Manually
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[400px]">
+              <DialogHeader>
+                <DialogTitle>Add Account Manually</DialogTitle>
+                <DialogDescription>Add an account without OAuth (won't be connected for publishing)</DialogDescription>
+              </DialogHeader>
+              <Form {...accountForm}>
+                <form onSubmit={accountForm.handleSubmit((data) => createAccountMutation.mutate(data))} className="space-y-4">
+                  <FormField
+                    control={accountForm.control}
+                    name="platform"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Platform</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select platform" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {PLATFORMS.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={accountForm.control}
+                    name="accountName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., My Business Page" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={accountForm.control}
+                    name="username"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Username</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g., @mybusiness" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter className="gap-2">
+                    <Button type="submit" disabled={createAccountMutation.isPending}>
+                      {createAccountMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Add Account
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <Card>
+        <CardContent className="pt-6">
+          {isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
+            </div>
+          ) : Array.isArray(accounts) && accounts.length > 0 ? (
+            <div className="space-y-3">
+              {accounts.map((account: any) => {
+                const platform = PLATFORMS.find((p) => p.id === account.platform);
+                const Icon = platform?.icon;
+                return (
+                  <div key={account.id} className="flex items-center justify-between gap-3 p-3 rounded-md border">
+                    <div className="flex items-center gap-3">
+                      {account.accountImage ? (
+                        <img src={account.accountImage} alt={account.accountName} className="h-9 w-9 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-full bg-muted flex items-center justify-center">
+                          {Icon && <Icon className="h-4 w-4" />}
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium">{account.accountName}</p>
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          {Icon && <Icon className="h-3 w-3" />}
+                          {platform?.label}
+                          {account.accountUsername && ` · @${account.accountUsername}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={account.isConnected ? 'default' : 'outline'}>
+                        {account.isConnected ? 'Connected' : 'Manual'}
+                      </Badge>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => disconnectMutation.mutate(account.id)}
+                        disabled={disconnectMutation.isPending}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 space-y-3">
+              <Link className="h-10 w-10 mx-auto text-muted-foreground" />
+              <p className="text-muted-foreground">No accounts connected yet</p>
+              <p className="text-sm text-muted-foreground">Click the button above to connect your Facebook or Instagram account, or add accounts manually</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">How it works</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
+          <p>1. Click <strong>Connect Facebook / Instagram</strong> above and log in with your Facebook account.</p>
+          <p>2. Select the Facebook Pages and Instagram accounts you want to manage from this portal.</p>
+          <p>3. Once connected, your accounts will appear here and you can create and publish posts directly to them.</p>
+          <p>4. Your accounts are private to your portal — no other clients can see or access them.</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function BrandVoiceTab() {
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingProfile, setEditingProfile] = useState<any>(null);
+  const { toast } = useToast();
+
+  const { data: profiles = [], isLoading } = useQuery<any[]>({
+    queryKey: ['/api/portal/social/brand-voice'],
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: (data: CreateBrandVoiceForm) => {
+      const payload = {
+        name: data.name,
+        tone: data.tone || undefined,
+        style: data.style || undefined,
+        isDefault: data.isDefault,
+        vocabulary: data.vocabulary ? data.vocabulary.split(',').map((w) => w.trim()).filter(Boolean) : [],
+        avoidWords: data.avoidWords ? data.avoidWords.split(',').map((w) => w.trim()).filter(Boolean) : [],
+        examplePosts: data.examplePosts ? data.examplePosts.split('\n').filter(Boolean) : [],
+      };
+      if (editingProfile) {
+        return apiRequest('PUT', `/api/portal/social/brand-voice/${editingProfile.id}`, payload);
+      }
+      return apiRequest('POST', '/api/portal/social/brand-voice', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/brand-voice'] });
+      setIsCreateOpen(false);
+      setEditingProfile(null);
+      form.reset();
+      toast({ title: 'Brand voice saved', description: 'Your brand voice profile has been saved.' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to save brand voice', variant: 'destructive' });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => apiRequest('DELETE', `/api/portal/social/brand-voice/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/portal/social/brand-voice'] });
+      toast({ title: 'Profile deleted' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Error', description: error.message || 'Failed to delete profile', variant: 'destructive' });
+    },
+  });
+
+  const form = useForm<CreateBrandVoiceForm>({
+    resolver: zodResolver(createBrandVoiceSchema),
+    defaultValues: { name: '', tone: '', style: '', vocabulary: '', avoidWords: '', examplePosts: '', isDefault: false },
+  });
+
+  const handleEdit = (profile: any) => {
+    setEditingProfile(profile);
+    form.reset({
+      name: profile.name || '',
+      tone: profile.tone || '',
+      style: profile.style || '',
+      vocabulary: Array.isArray(profile.vocabulary) ? profile.vocabulary.join(', ') : profile.vocabulary || '',
+      avoidWords: Array.isArray(profile.avoidWords) ? profile.avoidWords.join(', ') : profile.avoidWords || '',
+      examplePosts: Array.isArray(profile.examplePosts) ? profile.examplePosts.join('\n') : profile.examplePosts || '',
+      isDefault: profile.isDefault || false,
+    });
+    setIsCreateOpen(true);
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setIsCreateOpen(open);
+    if (!open) {
+      setEditingProfile(null);
+      form.reset();
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="text-2xl font-bold">Brand Voice</h2>
+          <p className="text-muted-foreground text-sm">Define how your brand sounds across social media</p>
+        </div>
+        <Dialog open={isCreateOpen} onOpenChange={handleDialogChange}>
+          <DialogTrigger asChild>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Profile
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingProfile ? 'Edit Brand Voice' : 'Create Brand Voice'}</DialogTitle>
+              <DialogDescription>Define the tone and style for your brand</DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit((data) => saveMutation.mutate(data))} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Profile Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Professional, Casual" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="tone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tone</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Friendly, Authoritative, Playful" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="style"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Style</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g., Concise, Storytelling, Data-driven" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="vocabulary"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Key Vocabulary (comma-separated)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="innovation, empower, transform" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="avoidWords"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Words to Avoid (comma-separated)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="cheap, basic, simple" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="examplePosts"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Example Posts (one per line)</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Paste example posts that represent your brand voice..."
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isDefault"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between gap-4 rounded-md border p-3">
+                      <div>
+                        <FormLabel className="mb-0">Default Profile</FormLabel>
+                        <p className="text-sm text-muted-foreground">Use this as the default brand voice</p>
+                      </div>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <DialogFooter className="gap-2">
+                  <Button type="submit" disabled={saveMutation.isPending}>
+                    {saveMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {editingProfile ? 'Update' : 'Create'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-3">
+                <Skeleton className="h-5 w-1/2" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-1/3" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : !Array.isArray(profiles) || profiles.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-1">No brand voice profiles</h3>
+            <p className="text-muted-foreground text-sm">Create a brand voice profile to guide your AI-generated content.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {profiles.map((profile: any) => (
+            <Card key={profile.id} className="hover-elevate">
+              <CardContent className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="font-semibold cursor-pointer" onClick={() => handleEdit(profile)}>{profile.name}</h3>
+                  <div className="flex items-center gap-1">
+                    {profile.isDefault && <Badge variant="default">Default</Badge>}
+                    <Button size="icon" variant="ghost" onClick={() => deleteMutation.mutate(profile.id)} disabled={deleteMutation.isPending}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                </div>
+                {profile.tone && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Tone:</span> {profile.tone}
+                  </div>
+                )}
+                {profile.style && (
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Style:</span> {profile.style}
+                  </div>
+                )}
+                {profile.vocabulary && (
+                  <div className="flex flex-wrap gap-1">
+                    {(Array.isArray(profile.vocabulary) ? profile.vocabulary : []).slice(0, 5).map((word: string, i: number) => (
+                      <Badge key={i} variant="outline">{word}</Badge>
+                    ))}
+                    {Array.isArray(profile.vocabulary) && profile.vocabulary.length > 5 && (
+                      <Badge variant="outline">+{profile.vocabulary.length - 5}</Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContentCalendarTab() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+
+  const { data: postsData, isLoading } = useQuery<any>({
+    queryKey: ['/api/portal/social/posts'],
+  });
+
+  const posts = postsData?.posts || postsData || [];
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDayOfWeek = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
+
+  const monthName = currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  const prevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
+  const nextMonth = () => setCurrentDate(new Date(year, month + 1, 1));
+
+  const postsByDate = useMemo(() => {
+    const map: Record<string, any[]> = {};
+    if (!Array.isArray(posts)) return map;
+    posts.forEach((post: any) => {
+      const dateStr = post.scheduledAt || post.publishedAt || post.createdAt;
+      if (!dateStr) return;
+      const d = new Date(dateStr);
+      if (d.getMonth() === month && d.getFullYear() === year) {
+        const key = d.getDate().toString();
+        if (!map[key]) map[key] = [];
+        map[key].push(post);
+      }
+    });
+    return map;
+  }, [posts, month, year]);
+
+  const selectedDayPosts = selectedDay
+    ? postsByDate[selectedDay.getDate().toString()] || []
+    : [];
+
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const calendarCells = [];
+  for (let i = 0; i < startDayOfWeek; i++) {
+    calendarCells.push(null);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    calendarCells.push(d);
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold">Content Calendar</h2>
+        <div className="flex items-center gap-2">
+          <Button size="icon" variant="ghost" onClick={prevMonth}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="font-medium min-w-[160px] text-center">{monthName}</span>
+          <Button size="icon" variant="ghost" onClick={nextMonth}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <Skeleton className="h-[400px] w-full" />
+      ) : (
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((day) => (
+                <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
+                  {day}
+                </div>
+              ))}
+              {calendarCells.map((day, index) => {
+                if (day === null) {
+                  return <div key={`empty-${index}`} className="min-h-[80px]" />;
+                }
+                const dayPosts = postsByDate[day.toString()] || [];
+                const isToday = day === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear();
+                return (
+                  <div
+                    key={day}
+                    className={`min-h-[80px] p-1 rounded-md border cursor-pointer hover-elevate ${isToday ? 'bg-primary/5 border-primary/30' : ''}`}
+                    onClick={() => setSelectedDay(new Date(year, month, day))}
+                  >
+                    <div className="text-right text-xs font-medium p-1">{day}</div>
+                    {dayPosts.length > 0 && (
+                      <div className="flex flex-wrap gap-1 px-1">
+                        {dayPosts.slice(0, 3).map((post: any) => (
+                          <div
+                            key={post.id}
+                            className={`h-1.5 w-1.5 rounded-full ${
+                              post.status === 'published' ? 'bg-green-500' :
+                              post.status === 'scheduled' ? 'bg-blue-500' :
+                              post.status === 'failed' ? 'bg-red-500' :
+                              'bg-muted-foreground'
+                            }`}
+                          />
+                        ))}
+                        {dayPosts.length > 3 && (
+                          <span className="text-xs text-muted-foreground">+{dayPosts.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={!!selectedDay} onOpenChange={(open) => !open && setSelectedDay(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5" />
+              {selectedDay?.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedDayPosts.length} {selectedDayPosts.length === 1 ? 'post' : 'posts'} on this day
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {selectedDayPosts.length ? (
+              selectedDayPosts.map((post: any) => (
+                <div key={post.id} className="p-3 rounded-md border space-y-2">
+                  <p className="text-sm whitespace-pre-wrap">{post.content || 'No content'}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {post.platforms &&
+                      (Array.isArray(post.platforms) ? post.platforms : []).map((p: string) => {
+                        const platform = PLATFORMS.find((pl) => pl.id === p);
+                        if (!platform) return null;
+                        const Icon = platform.icon;
+                        return (
+                          <Badge key={p} variant="outline">
+                            <Icon className="h-3 w-3 mr-1" />
+                            {platform.label}
+                          </Badge>
+                        );
+                      })}
+                    <Badge variant={STATUS_VARIANTS[post.status] || 'outline'}>
+                      {getStatusLabel(post.status || 'draft')}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-muted-foreground text-center py-4">No posts on this day.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function AnalyticsTab() {
+  const { data: postsData } = useQuery<any>({
+    queryKey: ['/api/portal/social/posts'],
+  });
+  const { data: campaignsData } = useQuery<any>({
+    queryKey: ['/api/portal/social/campaigns'],
+  });
+
+  const posts = Array.isArray(postsData) ? postsData : postsData?.posts || [];
+  const campaigns = Array.isArray(campaignsData) ? campaignsData : campaignsData?.campaigns || [];
+
+  const metrics = useMemo(() => {
+    let likes = 0, shares = 0, comments = 0, reach = 0;
+    let publishedCount = 0;
+    const platformMap: Record<string, { likes: number; shares: number; comments: number; reach: number; count: number }> = {};
+
+    posts.forEach((post: any) => {
+      const eng = post.engagement || {};
+      likes += eng.likes || 0;
+      shares += eng.shares || 0;
+      comments += eng.comments || 0;
+      reach += eng.reach || 0;
+      if (post.status === 'published') publishedCount++;
+
+      (post.platforms || []).forEach((p: string) => {
+        if (!platformMap[p]) platformMap[p] = { likes: 0, shares: 0, comments: 0, reach: 0, count: 0 };
+        platformMap[p].likes += eng.likes || 0;
+        platformMap[p].shares += eng.shares || 0;
+        platformMap[p].comments += eng.comments || 0;
+        platformMap[p].reach += eng.reach || 0;
+        platformMap[p].count++;
+      });
+    });
+
+    return { likes, shares, comments, reach, publishedCount, totalPosts: posts.length, platformMap };
+  }, [posts]);
+
+  const bestPosts = useMemo(() => {
+    return [...posts]
+      .filter((p: any) => p.engagement)
+      .sort((a: any, b: any) => {
+        const scoreA = (a.engagement?.likes || 0) + (a.engagement?.shares || 0) * 2 + (a.engagement?.comments || 0);
+        const scoreB = (b.engagement?.likes || 0) + (b.engagement?.shares || 0) * 2 + (b.engagement?.comments || 0);
+        return scoreB - scoreA;
+      })
+      .slice(0, 5);
+  }, [posts]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Analytics</h2>
+        <p className="text-muted-foreground text-sm">Performance overview of your social media posts</p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Heart className="h-4 w-4" /> Total Likes
+            </div>
+            <p className="text-3xl font-bold mt-1">{metrics.likes.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Share2 className="h-4 w-4" /> Total Shares
+            </div>
+            <p className="text-3xl font-bold mt-1">{metrics.shares.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <MessageSquare className="h-4 w-4" /> Comments
+            </div>
+            <p className="text-3xl font-bold mt-1">{metrics.comments.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+              <Eye className="h-4 w-4" /> Total Reach
+            </div>
+            <p className="text-3xl font-bold mt-1">{metrics.reach.toLocaleString()}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Per-Platform Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {Object.keys(metrics.platformMap).length === 0 ? (
+              <p className="text-muted-foreground text-sm">No platform data yet. Once your posts are published, engagement metrics will appear here.</p>
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(metrics.platformMap).map(([platform, data]) => {
+                  const pl = PLATFORMS.find((p) => p.id === platform);
+                  const Icon = pl?.icon;
+                  return (
+                    <div key={platform} className="flex items-center gap-3 border-b pb-2 last:border-0">
+                      {Icon && <Icon className="w-4 h-4" />}
+                      <span className="font-medium flex-1">{pl?.label || platform}</span>
+                      <span className="text-sm text-muted-foreground">{data.count} posts</span>
+                      <span className="text-sm flex items-center gap-1"><Heart className="h-3 w-3" /> {data.likes}</span>
+                      <span className="text-sm flex items-center gap-1"><Share2 className="h-3 w-3" /> {data.shares}</span>
+                      <span className="text-sm flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {data.comments}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Best Performing Posts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {bestPosts.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No engagement data yet. Posts with likes, shares, and comments will appear here once published.</p>
+            ) : (
+              <div className="space-y-3">
+                {bestPosts.map((post: any) => (
+                  <div key={post.id} className="border rounded-md p-3 space-y-2">
+                    <p className="text-sm line-clamp-2">{post.content}</p>
+                    <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1"><Heart className="h-3 w-3" /> {post.engagement?.likes || 0}</span>
+                      <span className="flex items-center gap-1"><Share2 className="h-3 w-3" /> {post.engagement?.shares || 0}</span>
+                      <span className="flex items-center gap-1"><MessageSquare className="h-3 w-3" /> {post.engagement?.comments || 0}</span>
+                      <span className="flex items-center gap-1"><Eye className="h-3 w-3" /> {post.engagement?.reach || 0}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Post Overview</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold">{metrics.totalPosts}</p>
+              <p className="text-sm text-muted-foreground">Total Posts</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{metrics.publishedCount}</p>
+              <p className="text-sm text-muted-foreground">Published</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{campaigns.length}</p>
+              <p className="text-sm text-muted-foreground">Campaigns</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+const VALID_TABS = ['dashboard', 'posts', 'create', 'campaigns', 'accounts', 'brand-voice', 'calendar', 'analytics'];
+const TAB_ALIASES: Record<string, string> = { 'ai-compose': 'create' };
+
+export default function PortalSocialMedia({ clientSlug }: PortalSocialMediaProps) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const rawTab = urlParams.get('tab') || 'dashboard';
+  const mappedTab = TAB_ALIASES[rawTab] ?? rawTab;
+  const initialTab = VALID_TABS.includes(mappedTab) ? mappedTab : 'dashboard';
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const { toast } = useToast();
+  const handledOAuth = useRef(false);
+
+  useEffect(() => {
+    if (handledOAuth.current) return;
+    const connected = urlParams.get('connected');
+    const oauthError = urlParams.get('error');
+    if (connected) {
+      handledOAuth.current = true;
+      toast({ title: 'Account connected', description: `${connected} account has been linked successfully.` });
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (oauthError) {
+      handledOAuth.current = true;
+      const errorMessages: Record<string, string> = {
+        no_pages: 'No Facebook Pages found. Make sure your Facebook account is an admin of at least one Facebook Page. Personal profiles cannot be connected — only Pages.',
+        pages_declined: 'You declined the required Facebook Pages permissions. Please try again and click "Edit previous settings" to grant access to your Pages.',
+        pages_not_granted: 'The "pages_show_list" permission was not granted. Please try again, click "Edit previous settings" on the Facebook dialog, and make sure all permissions are checked.',
+        no_code: 'OAuth authorization was not completed.',
+        missing_client: 'Client information was missing from the OAuth flow.',
+        invalid_state: 'OAuth state was invalid. Please try connecting again.',
+      };
+      toast({
+        title: 'Connection failed',
+        description: errorMessages[oauthError] || oauthError,
+        variant: 'destructive',
+      });
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  return (
+    <PortalLayout clientSlug={clientSlug}>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Social Media</h1>
+          <p className="text-muted-foreground">
+            Manage your social media campaigns and create AI-powered content
+          </p>
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="flex-wrap">
+            <TabsTrigger value="dashboard" className="gap-1">
+              <Zap className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="posts" className="gap-1">
+              <FileText className="h-4 w-4" />
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="create" className="gap-1">
+              <Bot className="h-4 w-4" />
+              AI Compose
+            </TabsTrigger>
+            <TabsTrigger value="campaigns" className="gap-1">
+              <Megaphone className="h-4 w-4" />
+              Campaigns
+            </TabsTrigger>
+            <TabsTrigger value="accounts" className="gap-1">
+              <UserCircle className="h-4 w-4" />
+              Accounts
+            </TabsTrigger>
+            <TabsTrigger value="brand-voice" className="gap-1">
+              <MessageSquare className="h-4 w-4" />
+              Brand Voice
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-1">
+              <CalendarDays className="h-4 w-4" />
+              Calendar
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-1">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="dashboard">
+            <DashboardTab />
+          </TabsContent>
+          <TabsContent value="posts">
+            <PostsTab />
+          </TabsContent>
+          <TabsContent value="create">
+            <CreatePostTab />
+          </TabsContent>
+          <TabsContent value="campaigns">
+            <CampaignsTab />
+          </TabsContent>
+          <TabsContent value="accounts">
+            <AccountsTab />
+          </TabsContent>
+          <TabsContent value="brand-voice">
+            <BrandVoiceTab />
+          </TabsContent>
+          <TabsContent value="calendar">
+            <ContentCalendarTab />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <AnalyticsTab />
+          </TabsContent>
+        </Tabs>
+      </div>
+    </PortalLayout>
+  );
+}
