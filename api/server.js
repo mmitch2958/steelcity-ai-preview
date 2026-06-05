@@ -2,11 +2,11 @@
 import { app } from "../dist/index.js";
 
 // Wait for async initialization (route registration) to complete
-if (!(globalThis as any).__appReady) {
+if (!globalThis.__appReady) {
   await new Promise(resolve => {
     const check = () => {
-      if ((globalThis as any).__appReady) {
-        resolve(undefined);
+      if (globalThis.__appReady) {
+        resolve();
       } else {
         setTimeout(check, 50);
       }
