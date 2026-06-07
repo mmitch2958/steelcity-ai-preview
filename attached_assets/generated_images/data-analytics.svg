@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" rx="12" fill="#1e1b4b"/>
+  <rect x="50" y="200" width="40" height="60" rx="4" fill="#6366f1" opacity="0.9"/>
+  <rect x="110" y="160" width="40" height="100" rx="4" fill="#818cf8" opacity="0.9"/>
+  <rect x="170" y="180" width="40" height="80" rx="4" fill="#6366f1" opacity="0.8"/>
+  <rect x="230" y="120" width="40" height="140" rx="4" fill="#a5b4fc" opacity="0.9"/>
+  <rect x="290" y="90" width="40" height="170" rx="4" fill="#c7d2fe" opacity="0.9"/>
+  <polyline points="70,190 130,150 190,170 250,110 310,80" fill="none" stroke="#34d399" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="70" cy="190" r="4" fill="#34d399"/><circle cx="130" cy="150" r="4" fill="#34d399"/>
+  <circle cx="190" cy="170" r="4" fill="#34d399"/><circle cx="250" cy="110" r="5" fill="#34d399"/>
+  <circle cx="310" cy="80" r="5" fill="#34d399"/>
+  <line x1="50" y1="260" x2="350" y2="260" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="200" y="288" text-anchor="middle" font-family="system-ui" font-size="14" font-weight="700" fill="white">Data Analytics</text>
+</svg>

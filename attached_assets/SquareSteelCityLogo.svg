@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <rect width="400" height="400" rx="20" fill="#1a1a2e"/>
+  <circle cx="200" cy="180" r="45" fill="#6366f1"/>
+  <text x="200" y="195" text-anchor="middle" font-family="system-ui" font-size="32" font-weight="900" fill="white">SC</text>
+  <text x="200" y="290" text-anchor="middle" font-family="system-ui" font-size="18" font-weight="700" fill="#a5b4fc">Steel City AI</text>
+</svg>

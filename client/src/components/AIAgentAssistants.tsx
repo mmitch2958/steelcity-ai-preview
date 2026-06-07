@@ -4,10 +4,10 @@ import { Badge } from '@/components/ui/badge'
 import { ArrowRight, Bot, Brain, MessageSquare, Zap, Calendar, Mail, Globe, Scale, Clock, CheckCircle2 } from 'lucide-react'
 import { useAnalytics } from '@/components/Analytics'
 
-import heroImg from '@assets/generated_images/ai_agent_assistant_hero.png'
-import multiChannelImg from '@assets/generated_images/ai_multi_channel_communication.png'
-import memoryImg from '@assets/generated_images/ai_persistent_memory.png'
-import scalabilityImg from '@assets/generated_images/ai_scalability.png'
+import heroImg from '@assets/generated_images/ai-agent-assistant.svg'
+import multiChannelImg from '@assets/generated_images/multi-channel.svg'
+import memoryImg from '@assets/generated_images/persistent-memory.svg'
+import scalabilityImg from '@assets/generated_images/scalability.svg'
 
 const capabilities = [
   {

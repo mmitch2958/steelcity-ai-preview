@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Mail, Linkedin, Twitter } from 'lucide-react'
 import { Link, useLocation } from 'wouter'
-import logoImage from '@assets/SquareSteelCityLogo_1770297861245.png'
+import logoImage from '@assets/SquareSteelCityLogo.svg'
 
 const footerSections = [
   {

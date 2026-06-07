@@ -7,11 +7,11 @@ import { Link } from 'wouter'
 import type { Service } from '@shared/schema'
 import { useAnalytics } from '@/components/Analytics'
 
-import documentProcessingImg from '@assets/generated_images/ai_document_processing_visual.png'
-import customAgentImg from '@assets/generated_images/custom_agent_automation_visual.png'
-import marketingAutomationImg from '@assets/generated_images/marketing_automation_visual.png'
-import dataAnalyticsImg from '@assets/generated_images/data_analytics_visual.png'
-import customSolutionsImg from '@assets/generated_images/custom_ai_solutions_visual.png'
+import documentProcessingImg from '@assets/generated_images/document-processing.svg'
+import customAgentImg from '@assets/generated_images/custom-automation.svg'
+import marketingAutomationImg from '@assets/generated_images/marketing-automation.svg'
+import dataAnalyticsImg from '@assets/generated_images/data-analytics.svg'
+import customSolutionsImg from '@assets/generated_images/custom-solutions.svg'
 
 const getServiceImage = (slug: string) => {
   switch (slug) {

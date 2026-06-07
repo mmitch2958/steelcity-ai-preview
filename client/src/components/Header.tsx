@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Menu, X, MessageCircle, Sparkles, Loader2 } from 'lucide-react'
 import { useLocation, Link } from 'wouter'
 import ThemeToggle from './ThemeToggle'
-import logoImage from '@assets/SquareSteelCityLogo_1770297861245.png'
+import logoImage from '@assets/SquareSteelCityLogo.svg'
 
 // Lazy-load heavy components for better initial page load performance
 const ProgressiveDiscoveryForm = lazy(() => import('./ProgressiveDiscoveryForm'))

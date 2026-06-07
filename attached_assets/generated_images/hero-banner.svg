@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1408 768">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1408" height="768" fill="url(#bg)"/>
+  <circle cx="704" cy="310" r="350" fill="url(#glow)"/>
+  <g stroke="#818cf8" stroke-width="2" opacity="0.3">
+    <line x1="300" y1="220" x2="500" y2="320"/><line x1="500" y1="320" x2="704" y2="270"/>
+    <line x1="704" y1="270" x2="900" y2="370"/><line x1="900" y1="370" x2="1100" y2="300"/>
+    <line x1="300" y1="220" x2="450" y2="520"/><line x1="450" y1="520" x2="700" y2="570"/>
+    <line x1="700" y1="570" x2="950" y2="500"/><line x1="950" y1="500" x2="1100" y2="300"/>
+  </g>
+  <circle cx="300" cy="220" r="14" fill="#818cf8"/><circle cx="500" cy="320" r="12" fill="#a5b4fc"/>
+  <circle cx="704" cy="270" r="16" fill="#6366f1"/><circle cx="900" cy="370" r="13" fill="#a5b4fc"/>
+  <circle cx="1100" cy="300" r="15" fill="#818cf8"/><circle cx="450" cy="520" r="10" fill="#c7d2fe"/>
+  <circle cx="700" cy="570" r="15" fill="#6366f1"/><circle cx="950" cy="500" r="11" fill="#a5b4fc"/>
+  <circle cx="704" cy="400" r="44" fill="#4f46e5"/><text x="704" y="414" text-anchor="middle" font-family="system-ui" font-size="30" font-weight="900" fill="white">AI</text>
+  <text x="704" y="640" text-anchor="middle" font-family="system-ui" font-size="52" font-weight="800" fill="white">Intelligent Automation</text>
+  <text x="704" y="690" text-anchor="middle" font-family="system-ui" font-size="24" fill="#a5b4fc" opacity="0.8">Workflow orchestration at scale</text>
+</svg>

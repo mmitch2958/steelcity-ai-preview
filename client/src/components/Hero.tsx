@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { ArrowRight, Sparkles, Plug, BookOpen, Clock } from 'lucide-react'
 import { Link } from 'wouter'
-import heroImage from '@assets/generated_images/AI_automation_hero_banner_93825f80.png'
+import heroImage from '@assets/generated_images/hero-banner.svg'
 
 const trustPoints = [
   { icon: Plug, label: 'Connects to your existing systems' },

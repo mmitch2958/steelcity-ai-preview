@@ -1,4 +1,4 @@
-import logoImage from '@assets/SquareSteelCityLogo_1770297861245.png'
+import logoImage from '@assets/SquareSteelCityLogo.svg'
 
 export default function PitchDeck() {
   return (
