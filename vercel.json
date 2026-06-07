@@ -1,17 +1,14 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/public",
   "functions": {
-    "api/server.js": {
+    "dist/index.js": {
       "runtime": "@vercel/node@3",
       "memory": 1024
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/server" },
-    { "source": "/uploads/(.*)", "destination": "/api/server" },
-    { "source": "/(.*)", "destination": "/api/server" }
+    { "source": "/(.*)", "destination": "/dist/index.js" }
   ],
   "env": {
     "NODE_ENV": "production"
